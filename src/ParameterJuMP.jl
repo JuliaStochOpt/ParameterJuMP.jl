@@ -258,7 +258,7 @@ function promote_gae{C,V}(in::JuMP.GenericAffExpr{C,V})::JuMP.GenericAffExpr{C,V
     sizehint!(new_vars, length(in.vars))
     # worse: new_vars = Vector{VarOrParam}(length(in.vars))
     @inbounds for i in eachindex(in.vars)
-        new_vars[i] = VarOrParam(in.vars[i])
+        push!(new_vars[i], VarOrParam(in.vars[i]))
     end
     # new_vars = [VarOrParam(in.vars[i]) for i in eachindex(in.vars)]
     return JuMP.GenericAffExpr{C,VarOrParam}(new_vars,in.coeffs,in.constant)
