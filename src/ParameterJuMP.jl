@@ -57,7 +57,7 @@ getparamdata(m::JuMP.Model) = m.ext[:params]::ParameterData
 getmodel(p::Parameter) = p.m
 
 function Parameter(m::JuMP.Model, val::Real)
-    params = getparamdata(m)
+    params = getparamdata(m)::ParameterData
 
     # how to add parameters after solve
     # dont
@@ -71,7 +71,7 @@ function Parameter(m::JuMP.Model, val::Real)
     params.next_ind += 1
 
     push!(params.inds, ind)
-    push!(params.current_values, val)
+    push!(params.current_values, 0.0)
     push!(params.future_values, val)
     push!(params.dual_values, NaN)
 
@@ -86,7 +86,8 @@ addsizehint!(vec::Vector, len::Integer) = sizehint!(vec, len+length(vec))
 
 Parameters(m::JuMP.Model, N::Integer) = Parameters(m::JuMP.Model, zeros(N))
 function Parameters(m::JuMP.Model, val::Vector{R}) where R
-    params = getparamdata(m)
+    # TIME: zero...
+    params = getparamdata(m)::ParameterData
 
     # how to add parameters after solve
     # dont
@@ -109,7 +110,7 @@ function Parameters(m::JuMP.Model, val::Vector{R}) where R
         params.next_ind += 1
 
         push!(params.inds, ind)
-        push!(params.current_values, val[i])
+        push!(params.current_values, 0.0)
         push!(params.future_values, val[i])
         push!(params.dual_values, NaN)
 
@@ -126,11 +127,11 @@ end
 # --------------------------------------------------------------------------------
 
 function JuMP.getvalue(p::Parameter)
-    params = getparamdata(p)
+    params = getparamdata(p)::ParameterData
     params.future_values[p.ind]
 end
 function setvalue!(p::Parameter, val::Real)
-    params = getparamdata(p)
+    params = getparamdata(p)::ParameterData
     if loaded
         params.sync = false
     else
@@ -139,7 +140,7 @@ function setvalue!(p::Parameter, val::Real)
     params.future_values[p.ind] = val
 end
 function JuMP.getdual(p::Parameter)
-    params = getparamdata(p)
+    params = getparamdata(p)::ParameterData
     if params.lazy
         return _getdual(p)
     else
@@ -151,7 +152,7 @@ function _getdual(p::Parameter)
     return _getdual(p.m, p.ind)
 end
 function _getdual(m::JuMP.Model, ind::Integer)
-    params = getparamdata(m)
+    params = getparamdata(m)::ParameterData
     ctrs = params.constraints_map[ind]
     coeffs = params.constraints_map_coeff[ind]
     out = 0.0
@@ -177,15 +178,29 @@ end
 # type 2: re-use GenericAffExpr{CoefType,VarType}
 # --------------------------------------------------------------------------------
 
-struct VarOrParam <: JuMP.AbstractJuMPScalar
+mutable struct VarOrParam <: JuMP.AbstractJuMPScalar
     isvar::Bool
     v::JuMP.Variable
     p::Parameter
+    # function VarOrParam()
+    #     new()
+    # end
 end
-
-VarOrParam(v::JuMP.Variable) = VarOrParam(true, v, Parameter(v.m,-1))
+VarOrParam(v::JuMP.Variable) = VarOrParam(true, v, Parameter(-1,v.m))
+# function VarOrParam(v::JuMP.Variable) 
+#     a = VarOrParam()
+#     a.isvar = true
+#     a.v =  v
+#     #, Parameter(-1,v.m))
+#     a
+# end
 VarOrParam(p::Parameter) = VarOrParam(false, JuMP.Variable(p.m,-1), p)
-
+# function VarOrParam(p::Parameter)# = VarOrParam(false, JuMP.Variable(p.m,-1), p)
+#     a = VarOrParam()
+#     a.isvar = false
+#     a.p =  p
+#     a
+# end
 const ParamExpr = JuMP.GenericAffExpr{Float64,Parameter}
 const ParamAffExpr = JuMP.GenericAffExpr{Float64,VarOrParam}
 const ParamLinearConstraint = JuMP.GenericRangeConstraint{ParamAffExpr}
@@ -213,37 +228,40 @@ importall Base.Operators
 (-)(lhs::Parameter, rhs::Parameter) = JuMP.GenericAffExpr([VarOrParam(lhs),VarOrParam(rhs)], [1.,-1.], 0.)
 
 # Variable--GenericAffExpr{C,VarOrParam}
-(+){C,V<:VarOrParam}(lhs::JuMP.Variable,  rhs::JuMP.GenericAffExpr{C,V}) = VarOrParam(lhs) + rhs
-(-){C,V<:VarOrParam}(lhs::JuMP.Variable,  rhs::JuMP.GenericAffExpr{C,V}) = VarOrParam(lhs) - rhs
-(+){C,V<:VarOrParam}(lhs::Parameter, rhs::JuMP.GenericAffExpr{C,V}) = VarOrParam(lhs) + rhs
-(-){C,V<:VarOrParam}(lhs::Parameter, rhs::JuMP.GenericAffExpr{C,V}) = VarOrParam(lhs) - rhs
+(+){C,V<:VarOrParam}(lhs::JuMP.Variable,  rhs::JuMP.GenericAffExpr{C,V})::JuMP.GenericAffExpr{C,VarOrParam} = VarOrParam(lhs) + rhs
+(-){C,V<:VarOrParam}(lhs::JuMP.Variable,  rhs::JuMP.GenericAffExpr{C,V})::JuMP.GenericAffExpr{C,VarOrParam} = VarOrParam(lhs) - rhs
+(+){C,V<:VarOrParam}(lhs::Parameter, rhs::JuMP.GenericAffExpr{C,V})::JuMP.GenericAffExpr{C,VarOrParam} = VarOrParam(lhs) + rhs
+(-){C,V<:VarOrParam}(lhs::Parameter, rhs::JuMP.GenericAffExpr{C,V})::JuMP.GenericAffExpr{C,VarOrParam} = VarOrParam(lhs) - rhs
 # GenericAffExpr{C,VarOrParam}--Variable
-(+){C,V<:VarOrParam}(lhs::JuMP.GenericAffExpr{C,V}, rhs::JuMP.Variable ) = lhs + VarOrParam(rhs)
-(-){C,V<:VarOrParam}(lhs::JuMP.GenericAffExpr{C,V}, rhs::JuMP.Variable ) = lhs - VarOrParam(rhs)
-(+){C,V<:VarOrParam}(lhs::JuMP.GenericAffExpr{C,V}, rhs::Parameter) = lhs + VarOrParam(rhs)
-(-){C,V<:VarOrParam}(lhs::JuMP.GenericAffExpr{C,V}, rhs::Parameter) = lhs - VarOrParam(rhs)
+(+){C,V<:VarOrParam}(lhs::JuMP.GenericAffExpr{C,V}, rhs::JuMP.Variable )::JuMP.GenericAffExpr{C,VarOrParam} = lhs + VarOrParam(rhs)
+(-){C,V<:VarOrParam}(lhs::JuMP.GenericAffExpr{C,V}, rhs::JuMP.Variable )::JuMP.GenericAffExpr{C,VarOrParam} = lhs - VarOrParam(rhs)
+(+){C,V<:VarOrParam}(lhs::JuMP.GenericAffExpr{C,V}, rhs::Parameter)::JuMP.GenericAffExpr{C,VarOrParam} = lhs + VarOrParam(rhs)
+(-){C,V<:VarOrParam}(lhs::JuMP.GenericAffExpr{C,V}, rhs::Parameter)::JuMP.GenericAffExpr{C,VarOrParam} = lhs - VarOrParam(rhs)
 
 # Parameter--AffExpr
-(+){C,V<:JuMP.Variable}(lhs::Parameter, rhs::JuMP.GenericAffExpr{C,V}) = lhs + promote_gae(rhs)
-(-){C,V<:JuMP.Variable}(lhs::Parameter, rhs::JuMP.GenericAffExpr{C,V}) = lhs - promote_gae(rhs)
+(+){C,V<:JuMP.Variable}(lhs::Parameter, rhs::JuMP.GenericAffExpr{C,V})::JuMP.GenericAffExpr{C,VarOrParam} = lhs + promote_gae(rhs)
+(-){C,V<:JuMP.Variable}(lhs::Parameter, rhs::JuMP.GenericAffExpr{C,V})::JuMP.GenericAffExpr{C,VarOrParam} = lhs - promote_gae(rhs)
 # AffExpr--Parameter
-(+){C,V<:JuMP.Variable}(lhs::JuMP.GenericAffExpr{C,V}, rhs::Parameter) = promote_gae(lhs) + rhs
-(-){C,V<:JuMP.Variable}(lhs::JuMP.GenericAffExpr{C,V}, rhs::Parameter) = promote_gae(lhs) - rhs
+(+){C,V<:JuMP.Variable}(lhs::JuMP.GenericAffExpr{C,V}, rhs::Parameter)::JuMP.GenericAffExpr{C,VarOrParam} = promote_gae(lhs) + rhs
+(-){C,V<:JuMP.Variable}(lhs::JuMP.GenericAffExpr{C,V}, rhs::Parameter)::JuMP.GenericAffExpr{C,VarOrParam} = promote_gae(lhs) - rhs
 
 # AffExpr--AffExpr
-(+){C}(lhs::JuMP.GenericAffExpr{C,JuMP.Variable}, rhs::JuMP.GenericAffExpr{C,VarOrParam}) = promote_gae(lhs) + rhs
-(-){C}(lhs::JuMP.GenericAffExpr{C,JuMP.Variable}, rhs::JuMP.GenericAffExpr{C,VarOrParam}) = promote_gae(lhs) - rhs
+(+){C}(lhs::JuMP.GenericAffExpr{C,JuMP.Variable}, rhs::JuMP.GenericAffExpr{C,VarOrParam})::JuMP.GenericAffExpr{C,VarOrParam} = promote_gae(lhs) + rhs
+(-){C}(lhs::JuMP.GenericAffExpr{C,JuMP.Variable}, rhs::JuMP.GenericAffExpr{C,VarOrParam})::JuMP.GenericAffExpr{C,VarOrParam} = promote_gae(lhs) - rhs
 # AffExpr--AffExpr
-(+){C}(lhs::JuMP.GenericAffExpr{C,VarOrParam}, rhs::JuMP.GenericAffExpr{C,JuMP.Variable}) = lhs + promote_gae(rhs)
-(-){C}(lhs::JuMP.GenericAffExpr{C,VarOrParam}, rhs::JuMP.GenericAffExpr{C,JuMP.Variable}) = lhs - promote_gae(rhs)
+(+){C}(lhs::JuMP.GenericAffExpr{C,VarOrParam}, rhs::JuMP.GenericAffExpr{C,JuMP.Variable})::JuMP.GenericAffExpr{C,VarOrParam} = lhs + promote_gae(rhs)
+(-){C}(lhs::JuMP.GenericAffExpr{C,VarOrParam}, rhs::JuMP.GenericAffExpr{C,JuMP.Variable})::JuMP.GenericAffExpr{C,VarOrParam} = lhs - promote_gae(rhs)
 
-function promote_gae{C,V}(in::JuMP.GenericAffExpr{C,V})
+function promote_gae{C,V}(in::JuMP.GenericAffExpr{C,V})::JuMP.GenericAffExpr{C,VarOrParam}
+    # TIME: most of pure build
     new_vars = VarOrParam[]
     sizehint!(new_vars, length(in.vars))
-    for i in eachindex(in.vars)
-        push!(new_vars, VarOrParam(in.vars[i]))
+    # worse: new_vars = Vector{VarOrParam}(length(in.vars))
+    @inbounds for i in eachindex(in.vars)
+        new_vars[i] = VarOrParam(in.vars[i])
     end
-    return JuMP.GenericAffExpr{C,VarOrParam}(new_vars,copy(in.coeffs),in.constant)
+    # new_vars = [VarOrParam(in.vars[i]) for i in eachindex(in.vars)]
+    return JuMP.GenericAffExpr{C,VarOrParam}(new_vars,in.coeffs,in.constant)
 end
 
 # Build constraint
@@ -279,7 +297,8 @@ function JuMP.addconstraint(m::JuMP.Model, c::ParamLinearConstraint)
     ref = JuMP.addconstraint(m, c_lin)
 
     # collect indices to constants
-    data = getparamdata(m)
+    # TIME 1/3
+    data = getparamdata(m)::ParameterData
     for i in eachindex(par.vars)
         push!(data.constraints_map[par.vars[i].ind], ref)
         push!(data.constraints_map_coeff[par.vars[i].ind], par.coeffs[i])
@@ -323,12 +342,6 @@ function split_paramlinctr(in::ParamAffExpr)
     out1 = JuMP.AffExpr(vars, v_coef, in.constant)
     out2 = ParamExpr(params, p_coef, 0.0)
 
-    data = getparamdata(params[1])
-
-    for i in eachindex(params)
-        in.constant += p_coef[i]*data.current_values[params[i].ind]
-    end
-
     return out1, out2
 end
 
@@ -336,7 +349,7 @@ end
 # --------------------------------------------------------------------------------
 
 function param_solvehook(m::JuMP.Model; suppress_warnings=false, kwargs...)
-    data = getparamdata(m)
+    data = getparamdata(m)::ParameterData
 
     # prepare linctr RHS lb and ub
     # prepConstrBounds(m::Model) will use these corrected values
@@ -376,5 +389,37 @@ function ModelWithParams(;solver = JuMP.UnsetSolver())
 
     return m
 end
+
+
+# function addtoexpr{C,V}(aff::GenericAffExpr{C,V}, c::Number, x::V)
+#     if c != 0
+#         push!(aff.vars,   x)
+#         push!(aff.coeffs, c)
+#     end
+#     aff
+# end
+
+function JuMP.addtoexpr{C}(aff::JuMP.GenericAffExpr{C,VarOrParam}, c::Number, x::JuMP.Variable)
+    if c != 0
+        push!(aff.vars, VarOrParam(x))
+        push!(aff.coeffs, c)
+    end
+    aff
+end
+JuMP.addtoexpr{C}(aff::JuMP.GenericAffExpr{C,VarOrParam}, x::JuMP.Variable, c::Number) = JuMP.addtoexpr(aff::JuMP.GenericAffExpr{C,VarOrParam}, c::Number, x::JuMP.Variable)
+function JuMP.addtoexpr{C}(aff::JuMP.GenericAffExpr{C,VarOrParam}, c::Number, x::Parameter)
+    if c != 0
+        push!(aff.vars, VarOrParam(x))
+        push!(aff.coeffs, c)
+    end
+    aff
+end
+JuMP.addtoexpr{C}(aff::JuMP.GenericAffExpr{C,VarOrParam}, x::Parameter, c::Number) = JuMP.addtoexpr(aff::JuMP.GenericAffExpr{C,VarOrParam}, c::Number, x::Parameter)
+
+JuMP.addtoexpr{C}(aff::JuMP.GenericAffExpr{C,JuMP.Variable}, c::Number, x::Parameter) = JuMP.addtoexpr(promote_gae(aff),c,x)
+JuMP.addtoexpr{C}(aff::JuMP.GenericAffExpr{C,JuMP.Variable}, x::Parameter, c::Number) = JuMP.addtoexpr(promote_gae(aff),c,x)
+
+JuMP.addtoexpr(ex::Number, c::Number, x::Parameter) = JuMP.GenericAffExpr([VarOrParam(x)],[c],ex)
+JuMP.addtoexpr(ex::Number, x::Parameter, c::Number) = JuMP.GenericAffExpr([VarOrParam(x)],[c],ex)
 
 end
