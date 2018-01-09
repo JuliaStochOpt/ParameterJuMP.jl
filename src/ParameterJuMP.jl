@@ -157,7 +157,7 @@ function _getdual(m::JuMP.Model, ind::Integer)
     coeffs = params.constraints_map_coeff[ind]
     out = 0.0
     for i in eachindex(ctrs)
-        out += coeffs[i]*getdual(ctrs[i])
+        out -= coeffs[i]*getdual(ctrs[i])
     end
     return out
 end
@@ -258,7 +258,7 @@ function promote_gae{C,V}(in::JuMP.GenericAffExpr{C,V})::JuMP.GenericAffExpr{C,V
     sizehint!(new_vars, length(in.vars))
     # worse: new_vars = Vector{VarOrParam}(length(in.vars))
     @inbounds for i in eachindex(in.vars)
-        push!(new_vars[i], VarOrParam(in.vars[i]))
+        push!(new_vars, VarOrParam(in.vars[i]))
     end
     # new_vars = [VarOrParam(in.vars[i]) for i in eachindex(in.vars)]
     return JuMP.GenericAffExpr{C,VarOrParam}(new_vars,in.coeffs,in.constant)
@@ -301,7 +301,7 @@ function JuMP.addconstraint(m::JuMP.Model, c::ParamLinearConstraint)
     data = getparamdata(m)::ParameterData
     for i in eachindex(par.vars)
         push!(data.constraints_map[par.vars[i].ind], ref)
-        push!(data.constraints_map_coeff[par.vars[i].ind], par.coeffs[i])
+        push!(data.constraints_map_coeff[par.vars[i].ind], -par.coeffs[i])
     end
 
     return ref
