@@ -12,10 +12,10 @@ function bench1_p(N::Int)
     x = Parameters(m_slave, 4.0*ones(10))
     @variable(m_slave, y[1:N])
     for i in 1:100
-        @constraint(m_slave, sum(3.0*y[i] for i in 1:N) >= 2 - sum(7.0*x[i] for i in 1:10))
+        @constraint(m_slave, sum(3.0*y[i] for i in 1:N) >= 2.0 - sum(7.0*x[i] for i in 1:10))
     end
     for i in 1:300
-        @constraint(m_slave, sum(3.0*y[i] for i in 1:N) >= 2)
+        @constraint(m_slave, sum(3.0*y[i] for i in 1:N) >= 2.0)
     end
 
 end
@@ -25,10 +25,10 @@ function bench1_v(N::Int)
     @variable(m_slave, x[1:N] == 4.0)
     @variable(m_slave, y[1:N])
     for i in 1:100
-        @constraint(m_slave, sum(3.0*y[i] for i in 1:N) >= 2 - sum(7.0*x[i] for i in 1:10))
+        @constraint(m_slave, sum(3.0*y[i] for i in 1:N) >= 2.0 - sum(7.0*x[i] for i in 1:10))
     end
     for i in 1:300
-        @constraint(m_slave, sum(3.0*y[i] for i in 1:N) >= 2)
+        @constraint(m_slave, sum(3.0*y[i] for i in 1:N) >= 2.0)
     end
 end
 function bench2_p(N::Int)
@@ -37,10 +37,10 @@ function bench2_p(N::Int)
     x = Parameters(m_slave, 4.0*ones(N))
     @variable(m_slave, y[1:N])
     for i in 1:100
-        @constraint(m_slave, sum(3.0*y[i] + 3.0 + 7.0*x[i] for i in 1:10) >= 2)
+        @constraint(m_slave, sum(3.0*y[i] + 3.0 + 7.0*x[i] for i in 1:10) >= 2.0)
     end
     for i in 1:300
-        @constraint(m_slave, sum(3.0*y[i] for i in 1:N) >= 2)
+        @constraint(m_slave, sum(3.0*y[i] for i in 1:N) >= 2.0)
     end
 end
 function bench2_v(N::Int)
@@ -49,10 +49,10 @@ function bench2_v(N::Int)
     @variable(m_slave, x[1:N] == 4.0)
     @variable(m_slave, y[1:N])
     for i in 1:100
-        @constraint(m_slave, sum(3.0*y[i] + 3.0 + 7.0*x[i] for i in 1:10) >= 2)
+        @constraint(m_slave, sum(3.0*y[i] + 3.0 + 7.0*x[i] for i in 1:10) >= 2.0)
     end
     for i in 1:300
-        @constraint(m_slave, sum(3.0*y[i] for i in 1:N) >= 2)
+        @constraint(m_slave, sum(3.0*y[i] for i in 1:N) >= 2.0)
     end
 end
 
