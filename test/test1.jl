@@ -42,7 +42,6 @@ function test1(solver)
 
         @test 0.0 == JuMP.getdual(ctr1)
         @test [0.0, 0.0, 11.6666, 0.0, 0.0, 0.0] ≈ JuMP.getdual(x) atol=1e-3
-        @show JuMP.getvalue(y)
         @test [-8.6666, 0.0, 0.0, 0.0, 0.0, 0.0] ≈ JuMP.getvalue(y) atol=1e-3
         @test -43.33333 ≈ JuMP.getobjectivevalue(m_slave) atol=1e-3
     end
