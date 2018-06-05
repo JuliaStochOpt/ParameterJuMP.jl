@@ -13,10 +13,10 @@ function test0(solver)
 
         solve(m_slave)
 
-        @test 1.66666 ≈ JuMP.getdual(ctr1) atol=1e-3
-        @test [11.6666, 0.0] ≈ JuMP.getdual(x) atol=1e-3
-        @test [-8.6666, 0.0, 0.0, 0.0, 0.0, 0.0] ≈ JuMP.getvalue(y) atol=1e-3
-        @test -43.33333 ≈ JuMP.getobjectivevalue(m_slave) atol=1e-3
+        @test 5/3 ≈ JuMP.getdual(ctr1) atol=1e-3
+        @test [35/3, 0.0] ≈ JuMP.getdual(x) atol=1e-3
+        @test [-26/3, 0.0, 0.0, 0.0, 0.0, 0.0] ≈ JuMP.getvalue(y) atol=1e-3
+        @test -130/3 ≈ JuMP.getobjectivevalue(m_slave) atol=1e-3
     end
 end
 
@@ -40,9 +40,11 @@ function test1(solver)
 
         solve(m_slave)
 
-        @test 0.0 == JuMP.getdual(ctr1)
-        @test [0.0, 0.0, 11.6666, 0.0, 0.0, 0.0] ≈ JuMP.getdual(x) atol=1e-3
-        @test [-8.6666, 0.0, 0.0, 0.0, 0.0, 0.0] ≈ JuMP.getvalue(y) atol=1e-3
-        @test -43.33333 ≈ JuMP.getobjectivevalue(m_slave) atol=1e-3
+        @test 5/3 ≈ getdual(ctr1) + getdual(ctr2) + getdual(ctr3) + getdual(ctr4) + getdual(ctr5) + getdual(ctr6) atol=1e-3
+        @test 0.0 ≈ getdual(ctr7) atol=1e-3
+        @test 0.0 ≈ getdual(ctr8) atol=1e-3
+        @test [0.0, 0.0, 35/3, 0.0, 0.0, 0.0] ≈ JuMP.getdual(x) atol=1e-3
+        @test [-26/3, 0.0, 0.0, 0.0, 0.0, 0.0] ≈ JuMP.getvalue(y) atol=1e-3
+        @test -130/3 ≈ JuMP.getobjectivevalue(m_slave) atol=1e-3
     end
 end
