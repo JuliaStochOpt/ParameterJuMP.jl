@@ -1,5 +1,3 @@
-
-
 function test0(solver)
     @testset "basic test" begin
         m_slave = ModelWithParams(solver = solver)

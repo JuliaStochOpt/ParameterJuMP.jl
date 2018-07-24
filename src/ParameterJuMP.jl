@@ -2,7 +2,7 @@ module ParameterJuMP
 
 using JuMP
 
-export 
+export
 ModelWithParams, Parameter, Parameters
 
 # types
@@ -132,10 +132,8 @@ function JuMP.getvalue(p::Parameter)
 end
 function setvalue!(p::Parameter, val::Real)
     params = getparamdata(p)::ParameterData
-    if loaded
+    if params.loaded
         params.sync = false
-    else
-        params.current_values[p.ind] = val
     end
     params.future_values[p.ind] = val
 end
@@ -361,9 +359,7 @@ end
 # solve
 # --------------------------------------------------------------------------------
 
-function param_solvehook(m::JuMP.Model; suppress_warnings=false, kwargs...)
-    data = getparamdata(m)::ParameterData
-
+function load(data::ParameterData)
     # prepare linctr RHS lb and ub
     # prepConstrBounds(m::Model) will use these corrected values
     for i in eachindex(data.current_values)
@@ -376,7 +372,15 @@ function param_solvehook(m::JuMP.Model; suppress_warnings=false, kwargs...)
             linctr.lb += c_map[j]*add
             linctr.ub += c_map[j]*add
         end
+        data.current_values[i] = data.future_values[i]
     end
+    data.loaded = true
+end
+
+function param_solvehook(m::JuMP.Model; suppress_warnings=false, kwargs...)
+    data = getparamdata(m)::ParameterData
+
+    load(data)
 
     ret = JuMP.solve(m::JuMP.Model, ignore_solve_hook = true, suppress_warnings=suppress_warnings, kwargs...)
 
