@@ -425,7 +425,7 @@ end
     Number
 =#
 
-JuMP.destructive_add!(ex::Number, c::C, x::Parameter) where C<:Number = PAE{C}(GAEv{C}(JuMP.VariableRef[],Float64[],ex),GAEp{C}([x],[c]))
+JuMP.destructive_add!(ex::Number, c::C, x::Parameter) where C<:Number = PAE{C}(GAEv{C}(ex),GAEp{C}(zero(C), x => c))
 JuMP.destructive_add!(ex::Number, x::Parameter, c::C) where C<:Number = JuMP.destructive_add!(ex, c, x)
 
 #=
@@ -439,10 +439,10 @@ JuMP.destructive_add!(ex::JuMP.VariableRef, x::Parameter, c::C) where C<:Number 
     Parameter
 =#
 
-JuMP.destructive_add!{C<:Number}(ex::Parameter, x::Number, c::C) = PAE{C}(GAEv{C}(JuMP.VariableRef[],Float64[],x*c),GAEp{C}([ex],[1.]))
+JuMP.destructive_add!(ex::Parameter, c::Number, x::Number) = c * x + ex
 
-JuMP.destructive_add!{C<:Number}(ex::Parameter, c::C, x::JuMP.VariableRef) = PAE{C}(GAEv{C}([x],[c],zero(C)),GAEp{C}([ex],[one(C)]))
-JuMP.destructive_add!{C<:Number}(ex::Parameter, x::JuMP.VariableRef, c::C) = PAE{C}(GAEv{C}([x],[c],zero(C)),GAEp{C}([ex],[one(C)]))
+JuMP.destructive_add!(ex::Parameter, c::C, x::JuMP.VariableRef) where C<:Number = PAE{C}(c * x, one(C) * ex)
+JuMP.destructive_add!(ex::Parameter, x::JuMP.VariableRef, c::Number) = JuMP.destructive_add!(ex, c, x)
 
 JuMP.destructive_add!{C<:Number}(ex::Parameter, c::C, x::Parameter) = PAE{C}(GAEv{C}(JuMP.VariableRef[],Float64[],zero(C)),GAEp{C}([ex,x],[one(C),c]))
 JuMP.destructive_add!{C<:Number}(ex::Parameter, x::Parameter, c::C) = PAE{C}(GAEv{C}(JuMP.VariableRef[],Float64[],zero(C)),GAEp{C}([ex,x],[one(C),c]))
@@ -480,14 +480,5 @@ function JuMP.destructive_add!(aff::PAE, c::Number, x::Union{Parameter, GAEp})
     end
     aff
 end
-
-_sizehint_expr!(q::PAE, n::Int) = begin
-    sizehint!(q.v.vars,   length(q.v.vars)   + n)
-    sizehint!(q.v.coeffs, length(q.v.coeffs) + n)
-    sizehint!(q.p.vars,   length(q.p.vars)   + n)
-    sizehint!(q.p.coeffs, length(q.p.coeffs) + n)
-    nothing
-end
-
 
 end
