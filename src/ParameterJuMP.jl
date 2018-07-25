@@ -2,7 +2,7 @@ module ParameterJuMP
 
 using JuMP
 
-export 
+export
 ModelWithParams, Parameter, Parameters
 
 # types
@@ -20,7 +20,7 @@ mutable struct ParameterData
     current_values::Vector{Float64}
     future_values::Vector{Float64}
 
-    loaded::Bool
+    # Whether the JuMP model is in sync with the value of the parameters
     sync::Bool
 
     # constraints where it is a RHS
@@ -41,8 +41,7 @@ mutable struct ParameterData
             1,
             Float64[],
             Float64[],
-            false,
-            false,
+            true,
             Dict{Int64, Vector{JuMP.LinConstrRef}}(),
             Dict{Int64, Vector{Float64}}(),
             false,
@@ -63,7 +62,7 @@ function Parameter(m::JuMP.Model, val::Real)
     # dont
     # how to delete parameter
     # dont
-    if params.loaded
+    if params.solved
         error()
     end
 
@@ -73,6 +72,9 @@ function Parameter(m::JuMP.Model, val::Real)
     push!(params.inds, ind)
     push!(params.current_values, 0.0)
     push!(params.future_values, val)
+    if !iszero(val)
+        params.sync = false
+    end
     push!(params.dual_values, NaN)
 
     params.constraints_map[ind] = JuMP.LinConstrRef[]
@@ -93,7 +95,7 @@ function Parameters(m::JuMP.Model, val::Vector{R}) where R
     # dont
     # how to delete parameter
     # dont
-    if params.loaded
+    if params.solved
         error()
     end
 
@@ -112,6 +114,9 @@ function Parameters(m::JuMP.Model, val::Vector{R}) where R
         push!(params.inds, ind)
         push!(params.current_values, 0.0)
         push!(params.future_values, val[i])
+        if !iszero(val[i])
+            params.sync = false
+        end
         push!(params.dual_values, NaN)
 
         params.constraints_map[ind] = JuMP.LinConstrRef[]
@@ -132,11 +137,7 @@ function JuMP.getvalue(p::Parameter)
 end
 function setvalue!(p::Parameter, val::Real)
     params = getparamdata(p)::ParameterData
-    if loaded
-        params.sync = false
-    else
-        params.current_values[p.ind] = val
-    end
+    params.sync = false
     params.future_values[p.ind] = val
 end
 function JuMP.getdual(p::Parameter)
@@ -361,24 +362,33 @@ end
 # solve
 # --------------------------------------------------------------------------------
 
+function sync(data::ParameterData)
+    if !data.sync
+        # prepare linctr RHS lb and ub
+        # prepConstrBounds(m::Model) will use these corrected values
+        for i in eachindex(data.current_values)
+            add = data.future_values[i]-data.current_values[i]
+            ind = data.inds[i]
+            p_map = data.constraints_map[i]
+            c_map = data.constraints_map_coeff[i]
+            for j in eachindex(p_map)
+                linctr = JuMP.LinearConstraint(p_map[j])
+                linctr.lb += c_map[j]*add
+                linctr.ub += c_map[j]*add
+            end
+            data.current_values[i] = data.future_values[i]
+        end
+        data.sync = true
+    end
+end
+
 function param_solvehook(m::JuMP.Model; suppress_warnings=false, kwargs...)
     data = getparamdata(m)::ParameterData
 
-    # prepare linctr RHS lb and ub
-    # prepConstrBounds(m::Model) will use these corrected values
-    for i in eachindex(data.current_values)
-        add = data.future_values[i]-data.current_values[i]
-        ind = data.inds[i]
-        p_map = data.constraints_map[i]
-        c_map = data.constraints_map_coeff[i]
-        for j in eachindex(p_map)
-            linctr = JuMP.LinearConstraint(p_map[j])
-            linctr.lb += c_map[j]*add
-            linctr.ub += c_map[j]*add
-        end
-    end
+    sync(data)
 
     ret = JuMP.solve(m::JuMP.Model, ignore_solve_hook = true, suppress_warnings=suppress_warnings, kwargs...)
+    data.solved = true
 
     if !data.lazy
         error("not lazy not supported")
