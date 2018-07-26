@@ -15,10 +15,10 @@ addons:
         - liblapack-dev
         - libgmp-dev
         - libglpk-dev
-script:
-    - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
-    - julia -e 'Pkg.clone(pwd())'
-    - julia -e 'Pkg.test("ParameterJuMP")'
+before_script:
+    - julia -e 'Pkg.add("MathOptInterface")'
+    - julia -e 'Pkg.add("JuMP")'
+    - julia -e 'Pkg.checkout("JuMP")'
 after_success:
     - echo $TRAVIS_JULIA_VERSION
     # push coverage results to Codecov
