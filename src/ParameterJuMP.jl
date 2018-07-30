@@ -1,6 +1,9 @@
 module ParameterJuMP
 
 using JuMP
+using MathOptInterface
+const MOI = MathOptInterface
+const MOIU = MOI.Utilities
 
 export
 ModelWithParams, Parameter, Parameters
@@ -11,6 +14,12 @@ ModelWithParams, Parameter, Parameters
 struct Parameter <: JuMP.AbstractJuMPScalar
     ind::Int64 # local reference
     m::JuMP.Model
+end
+
+# Reference to a constraint in which the parameter has coefficient coef
+struct ParametrizedConstraintRef
+    cref::JuMP.ConstraintRef
+    coef::Float64
 end
 
 mutable struct ParameterData
@@ -24,8 +33,7 @@ mutable struct ParameterData
     sync::Bool
 
     # constraints where it is a RHS
-    constraints_map::Dict{Int64, Vector{JuMP.LinConstrRef}}
-    constraints_map_coeff::Dict{Int64, Vector{Float64}}
+    constraints_map::Dict{Int64, Vector{ParametrizedConstraintRef}}
 
     # overload addvariable
     # variables_map::Dict{Int64, Vector{Int64}}
@@ -42,8 +50,7 @@ mutable struct ParameterData
             Float64[],
             Float64[],
             true,
-            Dict{Int64, Vector{JuMP.LinConstrRef}}(),
-            Dict{Int64, Vector{Float64}}(),
+            Dict{Int64, Vector{JuMP.ConstraintRef}}(),
             false,
             true,
             Float64[],
@@ -77,8 +84,7 @@ function Parameter(m::JuMP.Model, val::Real)
     end
     push!(params.dual_values, NaN)
 
-    params.constraints_map[ind] = JuMP.LinConstrRef[]
-    params.constraints_map_coeff[ind] = Float64[]
+    params.constraints_map[ind] = ParametrizedConstraintRef[]
 
     return Parameter(ind, m)
 end
@@ -119,8 +125,7 @@ function Parameters(m::JuMP.Model, val::Vector{R}) where R
         end
         push!(params.dual_values, NaN)
 
-        params.constraints_map[ind] = JuMP.LinConstrRef[]
-        params.constraints_map_coeff[ind] = Float64[]
+        params.constraints_map[ind] = ParametrizedConstraintRef[]
 
         push!(out, Parameter(ind, m))
     end
@@ -131,7 +136,7 @@ end
 # getters/setters
 # --------------------------------------------------------------------------------
 
-function JuMP.getvalue(p::Parameter)
+function JuMP.resultvalue(p::Parameter)
     params = getparamdata(p)::ParameterData
     params.future_values[p.ind]
 end
@@ -140,7 +145,7 @@ function setvalue!(p::Parameter, val::Real)
     params.sync = false
     params.future_values[p.ind] = val
 end
-function JuMP.getdual(p::Parameter)
+function JuMP.resultdual(p::Parameter)
     params = getparamdata(p)::ParameterData
     if params.lazy
         return _getdual(p)
@@ -152,26 +157,21 @@ end
 function _getdual(p::Parameter)
     return _getdual(p.m, p.ind)
 end
+_getdual(pcr::ParametrizedConstraintRef)::Float64 = pcr.coef * JuMP.resultdual(pcr.cref)
 function _getdual(m::JuMP.Model, ind::Integer)
     params = getparamdata(m)::ParameterData
-    ctrs = params.constraints_map[ind]
-    coeffs = params.constraints_map_coeff[ind]
-    out = 0.0
-    for i in eachindex(ctrs)
-        out -= coeffs[i]*getdual(ctrs[i])
-    end
-    return out
+    return -sum(_getdual.(params.constraints_map[ind]))
 end
 
 # type 1
 # --------------------------------------------------------------------------------
 
 const GAE{C,V} = JuMP.GenericAffExpr{C,V}
-const GAEv{C} = JuMP.GenericAffExpr{C,JuMP.Variable}
+const GAEv{C} = JuMP.GenericAffExpr{C,JuMP.VariableRef}
 const GAEp{C} = JuMP.GenericAffExpr{C,Parameter}
 
 mutable struct ParametrizedAffExpr{C} <: JuMP.AbstractJuMPScalar
-    v::JuMP.GenericAffExpr{C,JuMP.Variable}
+    v::JuMP.GenericAffExpr{C,JuMP.VariableRef}
     p::JuMP.GenericAffExpr{C,Parameter}
 end
 
@@ -179,8 +179,12 @@ end
 
 const PAE{C} = ParametrizedAffExpr{C}
 
-const ParametrizedLinearConstraint = JuMP.GenericRangeConstraint{ParametrizedAffExpr}
-const PLC = ParametrizedLinearConstraint
+struct ParametrizedAffExprConstraint{S <: MOI.AbstractScalarSet} <: JuMP.AbstractConstraint
+    func::PAE{Float64}
+    set::S
+end
+
+const PAEC{S} = ParametrizedAffExprConstraint{S}
 
 # Operators
 # --------------------------------------------------------------------------------
@@ -192,41 +196,41 @@ importall Base.Operators
 =#
 
 # Number--Parameter
-(+){C<:Number}(lhs::C, rhs::Parameter) = PAE{C}(GAEp{C}([rhs],[+1.]),GAEv{C}(JuMP.Variable[],C[],convert(Float64,lhs)))
-(-){C<:Number}(lhs::C, rhs::Parameter) = PAE{C}(GAEp{C}([rhs],[-1.]),GAEv{C}(JuMP.Variable[],C[],convert(Float64,lhs)))
-(*){C<:Number}(lhs::C, rhs::Parameter) = JuMP.GenericAffExpr{C}([rhs],[convert(Float64,lhs)], zero(C))
+(+)(lhs::C, rhs::Parameter) where C<:Number = PAE{C}(GAEv{C}(convert(Float64, lhs)), GAEp{C}(zero(C), rhs => +one(C)))
+(-)(lhs::C, rhs::Parameter) where C<:Number = PAE{C}(GAEv{C}(convert(Float64, lhs)), GAEp{C}(zero(C), rhs => -one(C)))
+(*)(lhs::C, rhs::Parameter) where C<:Number = GAEp{C}(zero(C), rhs => lhs)
 
 # Number--PAE
-(+){C}(lhs::Number, rhs::PAE{C}) = PAE{C}(lhs+rhs.v, copy(rhs.p))
-(-){C}(lhs::Number, rhs::PAE{C}) = PAE{C}(lhs-rhs.v,-rhs.p)
-(*){C}(lhs::Number, rhs::PAE{C}) = PAE{C}(lhs*rhs.v, lhs*rhs.p)
+(+)(lhs::Number, rhs::PAE{C}) where C<:Number = PAE{C}(lhs+rhs.v, copy(rhs.p))
+(-)(lhs::Number, rhs::PAE{C}) where C<:Number = PAE{C}(lhs-rhs.v,-rhs.p)
+(*)(lhs::Number, rhs::PAE{C}) where C<:Number = PAE{C}(lhs*rhs.v, lhs*rhs.p)
 
 #=
     Parameter
 =#
 
 # AbstractJuMPScalar
-(-)(lhs::Parameter) = JuMP.GenericAffExpr{C}([lhs],[-1.0],0.0)
+(-)(lhs::Parameter) = JuMP.GenericAffExpr(0.0, lhs => -1.0)
 
 # Parameter--Number
-(+)(lhs::Parameter, rhs::Number) = (+)( rhs,lhs)
-(-)(lhs::Parameter, rhs::Number) = (+)(-rhs,lhs)
-(*)(lhs::Parameter, rhs::Number) = (*)(rhs,lhs)
-(/)(lhs::Parameter, rhs::Number) = (*)(1./rhs,lhs)
+(+)(lhs::Parameter, rhs::Number) = (+)(rhs, lhs)
+(-)(lhs::Parameter, rhs::Number) = (+)(-rhs, lhs)
+(*)(lhs::Parameter, rhs::Number) = (*)(rhs, lhs)
+(/)(lhs::Parameter, rhs::Number) = (*)(1.0 / rhs, lhs)
 
-# Parameter--Variable
-(+)(lhs::Parameter, rhs::JuMP.Variable)::ParametrizedAffExpr = PAE{Float64}(GAEp{Float64}([lhs],[1.],0),GAEv{Float64}([rhs],[1.],0))
-(-)(lhs::Parameter, rhs::JuMP.Variable)::ParametrizedAffExpr = PAE{Float64}(GAEp{Float64}([lhs],[1.],0),GAEv{Float64}([rhs],[-1.],0))
+# Parameter--VariableRef
+(+)(lhs::Parameter, rhs::JuMP.VariableRef)::ParametrizedAffExpr = PAE{Float64}(GAEp{Float64}(0.0, lhs => 1.0), GAEv{Float64}(0.0, rhs =>  1.0))
+(-)(lhs::Parameter, rhs::JuMP.VariableRef)::ParametrizedAffExpr = PAE{Float64}(GAEp{Float64}(0.0, lhs => 1.0), GAEv{Float64}(0.0, rhs => -1.0))
 
 # Parameter--Parameter
-(+)(lhs::Parameter, rhs::Parameter) = JuMP.GenericAffExpr{C}([lhs,rhs], [1.,+1.], 0.)
-(-)(lhs::Parameter, rhs::Parameter) = JuMP.GenericAffExpr{C}([lhs,rhs], [1.,-1.], 0.)
+(+)(lhs::Parameter, rhs::Parameter) = JuMP.GenericAffExpr(0.0, lhs => 1.0, rhs => +1.0)
+(-)(lhs::Parameter, rhs::Parameter) = JuMP.GenericAffExpr(0.0, lhs => 1.0, rhs => -1.0)
 
 # Parameter--GAEp
 # (+){C}(lhs::Parameter, rhs::GAEp{C})::GAEp{C} = GAEp{C}(vcat(rhs.vars,lhs),vcat(rhs.coeffs,one(C)))
 # (-){C}(lhs::Parameter, rhs::GAEp{C})::GAEp{C} = GAEp{C}(vcat(rhs.vars,lhs),vcat(-rhs.coeffs,one(C)))
 
-# Parameter--GAEv/GenericAffExpr{C,Variable}
+# Parameter--GAEv/GenericAffExpr{C,VariableRef}
 (+){C}(lhs::Parameter, rhs::GAEv{C})::ParametrizedAffExpr{C} = PAE{C}(copy(rhs),GAEp{C}([lhs],[1.],0))
 (-){C}(lhs::Parameter, rhs::GAEv{C})::ParametrizedAffExpr{C} = PAE{C}(-rhs,GAEp{C}([lhs],[1.],0))
 
@@ -235,34 +239,34 @@ importall Base.Operators
 (-){C}(lhs::Parameter, rhs::PAE{C})::ParametrizedAffExpr{C} = PAE{C}(-rhs.v,lhs-rhs.p)
 
 #=
-    Variable
+    VariableRef
 =#
 
-# Variable--Parameter
-(+)(lhs::JuMP.Variable, rhs::Parameter)::ParametrizedAffExpr = PAE{Float64}(GAEv{Float64}([lhs],[1.],0),GAEp{Float64}([rhs],[1.],0))
-(-)(lhs::JuMP.Variable, rhs::Parameter)::ParametrizedAffExpr = PAE{Float64}(GAEv{Float64}([lhs],[1.],0),GAEp{Float64}([rhs],[-1.],0))
+# VariableRef--Parameter
+(+)(lhs::JuMP.VariableRef, rhs::Parameter)::ParametrizedAffExpr = PAE{Float64}(GAEv{Float64}([lhs],[1.],0),GAEp{Float64}([rhs],[1.],0))
+(-)(lhs::JuMP.VariableRef, rhs::Parameter)::ParametrizedAffExpr = PAE{Float64}(GAEv{Float64}([lhs],[1.],0),GAEp{Float64}([rhs],[-1.],0))
 
-# Variable--GenericAffExpr{C,Parameter}
-(+){C}(lhs::JuMP.Variable, rhs::GAEp{C})::ParametrizedAffExpr{C} = PAE{C}(GAEv{C}([lhs],[1.],0),copy(rhs))
-(-){C}(lhs::JuMP.Variable, rhs::GAEp{C})::ParametrizedAffExpr{C} = PAE{C}(GAEv{C}([lhs],[1.],0),-rhs)
+# VariableRef--GenericAffExpr{C,Parameter}
+(+){C}(lhs::JuMP.VariableRef, rhs::GAEp{C})::ParametrizedAffExpr{C} = PAE{C}(GAEv{C}([lhs],[1.],0),copy(rhs))
+(-){C}(lhs::JuMP.VariableRef, rhs::GAEp{C})::ParametrizedAffExpr{C} = PAE{C}(GAEv{C}([lhs],[1.],0),-rhs)
 
-# Variable--ParametrizedAffExpr{C}
-(+){C}(lhs::JuMP.Variable, rhs::PAE{C})::ParametrizedAffExpr{C} = PAE{C}(GAEv{C}([lhs],[1.],0),copy(rhs.p))
-(-){C}(lhs::JuMP.Variable, rhs::PAE{C})::ParametrizedAffExpr{C} = PAE{C}(GAEv{C}([lhs],[1.],0),-rhs.p)
+# VariableRef--ParametrizedAffExpr{C}
+(+){C}(lhs::JuMP.VariableRef, rhs::PAE{C})::ParametrizedAffExpr{C} = PAE{C}(GAEv{C}([lhs],[1.],0),copy(rhs.p))
+(-){C}(lhs::JuMP.VariableRef, rhs::PAE{C})::ParametrizedAffExpr{C} = PAE{C}(GAEv{C}([lhs],[1.],0),-rhs.p)
 
 #=
-    GenericAffExpr{C,Variable}
+    GenericAffExpr{C,VariableRef}
 =#
 
-# GenericAffExpr{C,Variable}--Parameter
+# GenericAffExpr{C,VariableRef}--Parameter
 (+){C}(lhs::GAEv{C}, rhs::Parameter)::ParametrizedAffExpr{C} = (+)(rhs,lhs)
 (-){C}(lhs::GAEv{C}, rhs::Parameter)::ParametrizedAffExpr{C} = (+)(-rhs,lhs)
 
-# GenericAffExpr{C,Variable}--GenericAffExpr{C,Parameter}
+# GenericAffExpr{C,VariableRef}--GenericAffExpr{C,Parameter}
 (+){C}(lhs::GAEv{C}, rhs::GAEp{C})::ParametrizedAffExpr{C} = PAE{C}(copy(lhs),copy(rhs))
 (-){C}(lhs::GAEv{C}, rhs::GAEp{C})::ParametrizedAffExpr{C} = PAE{C}(copy(lhs),-rhs)
 
-# GenericAffExpr{C,Variable}--ParametrizedAffExpr{C}
+# GenericAffExpr{C,VariableRef}--ParametrizedAffExpr{C}
 (+){C}(lhs::GAEv{C}, rhs::PAE{C})::ParametrizedAffExpr{C} = PAE{C}(lhs+rhs.v,copy(rhs.p))
 (-){C}(lhs::GAEv{C}, rhs::PAE{C})::ParametrizedAffExpr{C} = PAE{C}(lhs-rhs.v,-rhs.p)
 
@@ -273,11 +277,11 @@ importall Base.Operators
 # GenericAffExpr{C,Parameter}--Parameter
 # DONE in JuMP
 
-# GenericAffExpr{C,Parameter}--Variable
-(+){C}(lhs::GAEp{C}, rhs::JuMP.Variable)::ParametrizedAffExpr{C} = (+)(rhs,lhs)
-(-){C}(lhs::GAEp{C}, rhs::JuMP.Variable)::ParametrizedAffExpr{C} = (-)(-rhs,lhs)
+# GenericAffExpr{C,Parameter}--VariableRef
+(+){C}(lhs::GAEp{C}, rhs::JuMP.VariableRef)::ParametrizedAffExpr{C} = (+)(rhs,lhs)
+(-){C}(lhs::GAEp{C}, rhs::JuMP.VariableRef)::ParametrizedAffExpr{C} = (-)(-rhs,lhs)
 
-# GenericAffExpr{C,Parameter}--GenericAffExpr{C,Variable}
+# GenericAffExpr{C,Parameter}--GenericAffExpr{C,VariableRef}
 (+){C}(lhs::GAEp{C}, rhs::GAEv{C})::ParametrizedAffExpr{C} = (+)(rhs,lhs)
 (-){C}(lhs::GAEp{C}, rhs::GAEv{C})::ParametrizedAffExpr{C} = (-)(-rhs,lhs)
 
@@ -301,11 +305,11 @@ importall Base.Operators
 (+){C}(lhs::PAE{C}, rhs::Parameter)::ParametrizedAffExpr{C} = (+)(rhs,lhs)
 (-){C}(lhs::PAE{C}, rhs::Parameter)::ParametrizedAffExpr{C} = (-)(-rhs,lhs)
 
-# Variable--ParametrizedAffExpr{C}
-(+){C}(lhs::PAE{C}, rhs::JuMP.Variable)::ParametrizedAffExpr{C} = (+)(rhs,lhs)
-(-){C}(lhs::PAE{C}, rhs::JuMP.Variable)::ParametrizedAffExpr{C} = (-)(-rhs,lhs)
+# VariableRef--ParametrizedAffExpr{C}
+(+){C}(lhs::PAE{C}, rhs::JuMP.VariableRef)::ParametrizedAffExpr{C} = (+)(rhs,lhs)
+(-){C}(lhs::PAE{C}, rhs::JuMP.VariableRef)::ParametrizedAffExpr{C} = (-)(-rhs,lhs)
 
-# ParametrizedAffExpr{C}--GenericAffExpr{C,Variable}
+# ParametrizedAffExpr{C}--GenericAffExpr{C,VariableRef}
 # ParametrizedAffExpr{C}--GenericAffExpr{C,Parameter}
 (+){C,V}(lhs::PAE{C}, rhs::GAE{C,V})::ParametrizedAffExpr{C} = (+)(rhs,lhs)
 (-){C,V}(lhs::PAE{C}, rhs::GAE{C,V})::ParametrizedAffExpr{C} = (-)(-rhs,lhs)
@@ -318,63 +322,61 @@ importall Base.Operators
 # Build constraint
 # --------------------------------------------------------------------------------
 
-function JuMP.constructconstraint!(aff::ParametrizedAffExpr, sense::Symbol)
+# TODO should be in MOI, MOIU or JuMP
+shift_constant(set::S, offset) where S <: Union{MOI.LessThan,MOI.GreaterThan,MOI.EqualTo} = S(MOIU.getconstant(set) + offset)
+function shift_constant(set::MOI.Interval, offset)
+    MOI.Interval(set.lower + offset, set.upper + offset)
+end
+
+function JuMP.buildconstraint(_error::Function, aff::ParametrizedAffExpr, set::S) where S <: Union{MOI.LessThan,MOI.GreaterThan,MOI.EqualTo}
     offset = aff.v.constant
     aff.v.constant = 0.0
-    if sense == :(<=) || sense == :≤
-        return ParametrizedLinearConstraint(aff, -Inf, -offset)
-    elseif sense == :(>=) || sense == :≥
-        return ParametrizedLinearConstraint(aff, -offset, Inf)
-    elseif sense == :(==)
-        return ParametrizedLinearConstraint(aff, -offset, -offset)
-    else
-        error("Cannot handle ranged constraint")
-    end
+    shifted_set = shift_constant(set, -offset)
+    return PAEC{typeof(shifted_set)}(aff, shifted_set)
 end
 
-function JuMP.constructconstraint!(aff::ParametrizedAffExpr, lb, ub)
-    offset = aff.constant
-    aff.constant = 0.0
-    ParametrizedLinearConstraint(aff, lb-offset, ub-offset)
+function JuMP.buildconstraint(_error::Function, aff::ParametrizedAffExpr, lb, ub)
+    JuMP.buildconstraint(_error, aff, MOI.Interval(lb, ub))
 end
 
-function JuMP.addconstraint(m::JuMP.Model, c::ParametrizedLinearConstraint)
+function JuMP.addconstraint(m::JuMP.Model, c::PAEC, name::String="")
 
     # build LinearConstraint
-    c_lin = JuMP.LinearConstraint(c.terms.v, c.lb,c.ub)
+    c_lin = JuMP.AffExprConstraint(c.func.v, c.set)
 
     # JuMP´s standard addconstrint
-    ref = JuMP.addconstraint(m, c_lin)
+    cref = JuMP.addconstraint(m, c_lin, name)
 
     # collect indices to constants
     # TIME 1/3
     # TODO just save ParamAffExpr
     data = getparamdata(m)::ParameterData
-    p = c.terms.p
-    for i in eachindex(p.vars)
-        push!(data.constraints_map[p.vars[i].ind], ref)
-        push!(data.constraints_map_coeff[p.vars[i].ind], -p.coeffs[i])
+    for (param, coef) in c.func.p.terms
+        push!(data.constraints_map[param.ind], ParametrizedConstraintRef(cref, -coef))
     end
 
-    return ref
+    return cref
 end
 
 # solve
 # --------------------------------------------------------------------------------
 
+function update(pcr, Δ)
+    cref = pcr.cref
+    ci = JuMP.index(cref)
+    old_set = MOI.get(cref.m.moibackend, MOI.ConstraintSet(), ci)
+    new_set = shift_constant(old_set, pcr.coef * Δ)
+    MOI.set!(cref.m.moibackend, MOI.ConstraintSet(), ci, new_set)
+end
+
 function sync(data::ParameterData)
     if !data.sync
-        # prepare linctr RHS lb and ub
-        # prepConstrBounds(m::Model) will use these corrected values
         for i in eachindex(data.current_values)
-            add = data.future_values[i]-data.current_values[i]
-            ind = data.inds[i]
-            p_map = data.constraints_map[i]
-            c_map = data.constraints_map_coeff[i]
-            for j in eachindex(p_map)
-                linctr = JuMP.LinearConstraint(p_map[j])
-                linctr.lb += c_map[j]*add
-                linctr.ub += c_map[j]*add
+            Δ = data.future_values[i] - data.current_values[i]
+            if !iszero(Δ)
+                for pcr in data.constraints_map[i]
+                    update(pcr, Δ)
+                end
             end
             data.current_values[i] = data.future_values[i]
         end
@@ -382,12 +384,12 @@ function sync(data::ParameterData)
     end
 end
 
-function param_solvehook(m::JuMP.Model; suppress_warnings=false, kwargs...)
+function param_optimizehook(m::JuMP.Model; kwargs...)
     data = getparamdata(m)::ParameterData
 
     sync(data)
 
-    ret = JuMP.solve(m::JuMP.Model, ignore_solve_hook = true, suppress_warnings=suppress_warnings, kwargs...)
+    ret = JuMP.optimize(m::JuMP.Model, ignore_optimize_hook = true, kwargs...)
     data.solved = true
 
     if !data.lazy
@@ -402,11 +404,11 @@ function param_solvehook(m::JuMP.Model; suppress_warnings=false, kwargs...)
     return ret
 end
 
-function ModelWithParams(;solver = JuMP.UnsetSolver())
+function ModelWithParams(args...; kwargs...)
 
-    m = JuMP.Model(solver = solver)
+    m = JuMP.Model(args...; kwargs...)
 
-    JuMP.setsolvehook(m, param_solvehook)
+    JuMP.setoptimizehook(m, param_optimizehook)
 
     m.ext[:params] = ParameterData()
 
@@ -414,116 +416,69 @@ function ModelWithParams(;solver = JuMP.UnsetSolver())
 end
 
 
-# addtoexpr
+# destructive_add!
 # --------------------------------------------------------------------------------
 
-# addtoexpr{C}(ex::Number, c::Number, x::Number) = ex + c*x
+# destructive_add!{C}(ex::Number, c::Number, x::Number) = ex + c*x
 
 #=
     Number
 =#
 
-JuMP.addtoexpr{C<:Number}(ex::Number, c::C, x::Parameter) = PAE{C}(GAEv{C}(JuMP.Variable[],Float64[],ex),GAEp{C}([x],[c]))
-JuMP.addtoexpr{C<:Number}(ex::Number, x::Parameter, c::C) = PAE{C}(GAEv{C}(JuMP.Variable[],Float64[],ex),GAEp{C}([x],[c]))
+JuMP.destructive_add!(ex::Number, c::C, x::Parameter) where C<:Number = PAE{C}(GAEv{C}(ex),GAEp{C}(zero(C), x => c))
+JuMP.destructive_add!(ex::Number, x::Parameter, c::C) where C<:Number = JuMP.destructive_add!(ex, c, x)
 
 #=
-    Variable
+    VariableRef
 =#
 
-JuMP.addtoexpr{C<:Number}(ex::JuMP.Variable, c::C, x::Parameter) = PAE{C}(GAEv{C}([ex],[one(C)],zero(C)),GAEp{C}([x],[c]))
-JuMP.addtoexpr{C<:Number}(ex::JuMP.Variable, x::Parameter, c::C) = PAE{C}(GAEv{C}([ex],[one(C)],zero(C)),GAEp{C}([x],[c]))
+JuMP.destructive_add!(ex::JuMP.VariableRef, c::C, x::Parameter) where C<:Number = PAE{C}(GAEv{C}(zero(C), ex => one(C)), GAEp{C}(zero(C), x => c))
+JuMP.destructive_add!(ex::JuMP.VariableRef, x::Parameter, c::C) where C<:Number = JuMP.destructive_add!(ex, c, x)
 
 #=
     Parameter
 =#
 
-JuMP.addtoexpr{C<:Number}(ex::Parameter, x::Number, c::C) = PAE{C}(GAEv{C}(JuMP.Variable[],Float64[],x*c),GAEp{C}([ex],[1.]))
+JuMP.destructive_add!(ex::Parameter, c::Number, x::Number) = c * x + ex
 
-JuMP.addtoexpr{C<:Number}(ex::Parameter, c::C, x::JuMP.Variable) = PAE{C}(GAEv{C}([x],[c],zero(C)),GAEp{C}([ex],[one(C)]))
-JuMP.addtoexpr{C<:Number}(ex::Parameter, x::JuMP.Variable, c::C) = PAE{C}(GAEv{C}([x],[c],zero(C)),GAEp{C}([ex],[one(C)]))
+JuMP.destructive_add!(ex::Parameter, c::C, x::JuMP.VariableRef) where C<:Number = PAE{C}(c * x, one(C) * ex)
+JuMP.destructive_add!(ex::Parameter, x::JuMP.VariableRef, c::Number) = JuMP.destructive_add!(ex, c, x)
 
-JuMP.addtoexpr{C<:Number}(ex::Parameter, c::C, x::Parameter) = PAE{C}(GAEv{C}(JuMP.Variable[],Float64[],zero(C)),GAEp{C}([ex,x],[one(C),c]))
-JuMP.addtoexpr{C<:Number}(ex::Parameter, x::Parameter, c::C) = PAE{C}(GAEv{C}(JuMP.Variable[],Float64[],zero(C)),GAEp{C}([ex,x],[one(C),c]))
+JuMP.destructive_add!{C<:Number}(ex::Parameter, c::C, x::Parameter) = PAE{C}(GAEv{C}(JuMP.VariableRef[],Float64[],zero(C)),GAEp{C}([ex,x],[one(C),c]))
+JuMP.destructive_add!{C<:Number}(ex::Parameter, x::Parameter, c::C) = PAE{C}(GAEv{C}(JuMP.VariableRef[],Float64[],zero(C)),GAEp{C}([ex,x],[one(C),c]))
 
 #=
     GAEp
 =#
 
-JuMP.addtoexpr{C}(aff::GAEp{C}, c::Number, x::Number) = PAE{C}(GAEv{C}(JuMP.Variable[],Float64[],c*x),aff)
+JuMP.destructive_add!{C}(aff::GAEp{C}, c::Number, x::Number) = PAE{C}(GAEv{C}(c*x), aff)
 
-JuMP.addtoexpr{C}(aff::GAEp{C}, x::JuMP.Variable, c::Number) = JuMP.addtoexpr{C}(aff::GAEp{C}, c::Number, x::JuMP.Variable)
-JuMP.addtoexpr{C}(aff::GAEp{C}, c::Number, x::JuMP.Variable) = PAE{C}(GAEv{C}([x],[c],zero(C)),aff)
-
-JuMP.addtoexpr{C}(aff::GAEp{C}, x::GAEv{C}, c::Number) = JuMP.addtoexpr{C}(aff::GAEp{C}, c::Number, x::GAEv{C})
-JuMP.addtoexpr{C}(aff::GAEp{C}, c::Number, x::GAEv{C}) = PAE{C}(GAEv{C}(x.vars,c*x.coeffs),aff)
+JuMP.destructive_add!(aff::GAEp{C}, x::Union{JuMP.VariableRef, GAEv{C}}, c::Number) where C = JuMP.destructive_add!(aff, c, x)
+JuMP.destructive_add!(aff::GAEp{C}, c::Number, x::Union{JuMP.VariableRef, GAEv{C}}) where C = PAE{C}(convert(C, c) * x, aff)
 
 #=
     GAEv
 =#
 
-JuMP.addtoexpr{C}(aff::GAEv{C}, x::Parameter, c::Number) = JuMP.addtoexpr{C}(aff::GAEv{C}, c::Number, x::Parameter)
-JuMP.addtoexpr{C<:Number}(aff::GAEv{C}, c::Number, x::Parameter) = PAE{C}(aff,GAEp{C}([x],[c],zero(C)))
-
-JuMP.addtoexpr{C}(aff::GAEv{C}, x::GAEp{C}, c::Number) = JuMP.addtoexpr{C}(aff::GAEv{C}, c::Number, x::GAEp{C})
-JuMP.addtoexpr{C}(aff::GAEv{C}, c::Number, x::GAEp{C}) = PAE{C}(aff,GAEp{C}(x.vars,c*x.coeffs))
+JuMP.destructive_add!(aff::GAEv{C}, x::Union{Parameter, GAEp{C}}, c::Number) where C = JuMP.destructive_add!(aff, c, x)
+JuMP.destructive_add!(aff::GAEv{C}, c::Number, x::Union{Parameter, GAEp{C}}) where C = PAE{C}(aff, convert(C, c) * x)
 
 #=
     PAE
 =#
 
-JuMP.addtoexpr{C}(aff::PAE{C}, x::Parameter, c::Number) = JuMP.addtoexpr{C}(aff::PAE{C}, c::Number, x::Parameter)
-function JuMP.addtoexpr{C}(aff::PAE{C}, c::Number, x::Parameter)
-    if c != 0
-        push!(aff.p.vars, x)
-        push!(aff.p.coeffs, c)
+JuMP.destructive_add!(aff::PAE, x::Union{JuMP.VariableRef, GAEv, Parameter, GAEp}, c::Number) = JuMP.destructive_add!(aff, c, x)
+function JuMP.destructive_add!(aff::PAE, c::Number, x::Union{JuMP.VariableRef, GAEv})
+    if !iszero(c)
+        aff.v = JuMP.destructive_add!(aff.v, c, x)
     end
     aff
 end
-
-JuMP.addtoexpr{C}(aff::PAE{C}, x::JuMP.Variable, c::Number) = JuMP.addtoexpr{C}(aff::PAE{C}, c::Number, x::JuMP.Variable)
-function JuMP.addtoexpr{C}(aff::PAE{C}, c::Number, x::JuMP.Variable)
-    if c != 0
-        push!(aff.v.vars, x)
-        push!(aff.v.coeffs, c)
+function JuMP.destructive_add!(aff::PAE, c::Number, x::Union{Parameter, GAEp})
+    if !iszero(c)
+        aff.p = JuMP.destructive_add!(aff.p, c, x)
     end
     aff
 end
-
-JuMP.addtoexpr{C}(aff::PAE{C}, x::GAEp{C}, c::Number) = JuMP.addtoexpr{C}(aff::PAE{C}, c::Number, x::GAEp{C})
-function JuMP.addtoexpr{C}(aff::PAE{C}, c::Number, x::GAEp{C})
-    if c != 0
-        append!(aff.p.vars, x.vars)
-        append!(aff.p.coeffs, c*x.coeffs)
-        # sizehint!(aff.p.coeffs, length(aff.p.coeffs)+length(x.coeffs))
-        # for i in 1:length(x.coeffs)
-        #     push!(aff.p.coeffs, c*x.coeffs[i])
-        # end
-        aff.v.constant += c*x.constant
-    end
-    aff
-end
-
-JuMP.addtoexpr{C}(aff::PAE{C}, x::GAEv{C}, c::Number) = JuMP.addtoexpr{C}(aff::PAE{C}, c::Number, x::GAEv{C})
-function JuMP.addtoexpr{C}(aff::PAE{C}, c::Number, x::GAEv{C})
-    if c != 0
-        append!(aff.v.vars, x.vars)
-        append!(aff.v.coeffs, c*x.coeffs)
-        # sizehint!(aff.v.coeffs, length(aff.v.coeffs)+length(x.coeffs))
-        # for i in 1:length(x.coeffs)
-        #     push!(aff.v.coeffs, c*x.coeffs[i])
-        # end
-        aff.v.constant += c*x.constant
-    end
-    aff
-end
-
-_sizehint_expr!(q::PAE, n::Int) = begin
-    sizehint!(q.v.vars,   length(q.v.vars)   + n)
-    sizehint!(q.v.coeffs, length(q.v.coeffs) + n)
-    sizehint!(q.p.vars,   length(q.p.vars)   + n)
-    sizehint!(q.p.coeffs, length(q.p.coeffs) + n)
-    nothing
-end
-
 
 end
