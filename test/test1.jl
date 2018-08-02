@@ -13,7 +13,7 @@ function test0(optimizer)
         JuMP.optimize(m_slave)
 
         @test 5/3 ≈ JuMP.resultdual(ctr1) atol=1e-3
-        @test [35/3, 0.0] ≈ JuMP.resultdual.(x) atol=1e-3
+        @test [-35/3, 0.0] ≈ JuMP.resultdual.(x) atol=1e-3
         @test [-26/3, 0.0, 0.0, 0.0, 0.0, 0.0] ≈ JuMP.resultvalue.(y) atol=1e-3
         @test -130/3 ≈ JuMP.objectivevalue(m_slave) atol=1e-3
     end
@@ -43,7 +43,7 @@ function test1(optimizer)
         @test 5/3 ≈ JuMP.resultdual(ctr1) + JuMP.resultdual(ctr2) + JuMP.resultdual(ctr3) + JuMP.resultdual(ctr4) + JuMP.resultdual(ctr5) + JuMP.resultdual(ctr6) atol=1e-3
         @test 0.0 ≈ JuMP.resultdual(ctr7) atol=1e-3
         @test 0.0 ≈ JuMP.resultdual(ctr8) atol=1e-3
-        @test [0.0, 0.0, 35/3, 0.0, 0.0, 0.0] ≈ JuMP.JuMP.resultdual.(x) atol=1e-3
+        @test [0.0, 0.0, -35/3, 0.0, 0.0, 0.0] ≈ JuMP.JuMP.resultdual.(x) atol=1e-3
         @test [-26/3, 0.0, 0.0, 0.0, 0.0, 0.0] ≈ JuMP.JuMP.resultvalue.(y) atol=1e-3
         @test -130/3 ≈ JuMP.objectivevalue(m_slave) atol=1e-3
     end
