@@ -1,7 +1,6 @@
-function test0(optimizer)
+function test0(args...)
     @testset "basic test" begin
-        MOI.empty!(optimizer)
-        m_slave = ModelWithParams(optimizer = optimizer)
+        m_slave = ModelWithParams(args...)
 
         x = Parameters(m_slave, 4.0*ones(2))
         @variable(m_slave, y[1:6])
@@ -19,10 +18,9 @@ function test0(optimizer)
     end
 end
 
-function test1(optimizer)
+function test1(args...)
     @testset "multiple parameters" begin
-        MOI.empty!(optimizer)
-        m_slave = ModelWithParams(optimizer = optimizer)
+        m_slave = ModelWithParams(args...)
 
         x = Parameters(m_slave, 4.0*ones(6))
         @variable(m_slave, y[1:6])

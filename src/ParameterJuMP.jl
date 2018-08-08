@@ -246,44 +246,44 @@ importall Base.Operators
 # (-){C}(lhs::Parameter, rhs::GAEp{C})::GAEp{C} = GAEp{C}(vcat(rhs.vars,lhs),vcat(-rhs.coeffs,one(C)))
 
 # Parameter--GAEv/GenericAffExpr{C,VariableRef}
-(+)(lhs::Parameter, rhs::GAEv{C})::ParametrizedAffExpr{C} where {C} = PAE{C}(copy(rhs),GAEp{C}([lhs],[1.],0))
-(-)(lhs::Parameter, rhs::GAEv{C})::ParametrizedAffExpr{C} where {C} = PAE{C}(-rhs,GAEp{C}([lhs],[1.],0))
+(+)(lhs::Parameter, rhs::GAEv{C}) where {C} = PAE{C}(copy(rhs),GAEp{C}([lhs],[1.],0))
+(-)(lhs::Parameter, rhs::GAEv{C}) where {C} = PAE{C}(-rhs,GAEp{C}([lhs],[1.],0))
 
 # Parameter--ParametrizedAffExpr{C}
-(+)(lhs::Parameter, rhs::PAE{C})::ParametrizedAffExpr{C} where {C} = PAE{C}(copy(rhs.v),lhs+rhs.p)
-(-)(lhs::Parameter, rhs::PAE{C})::ParametrizedAffExpr{C} where {C} = PAE{C}(-rhs.v,lhs-rhs.p)
+(+)(lhs::Parameter, rhs::PAE{C}) where {C} = PAE{C}(copy(rhs.v),lhs+rhs.p)
+(-)(lhs::Parameter, rhs::PAE{C}) where {C} = PAE{C}(-rhs.v,lhs-rhs.p)
 
 #=
     VariableRef
 =#
 
 # VariableRef--Parameter
-(+)(lhs::JuMP.VariableRef, rhs::Parameter)::ParametrizedAffExpr = PAE{Float64}(GAEv{Float64}([lhs],[1.],0),GAEp{Float64}([rhs],[1.],0))
-(-)(lhs::JuMP.VariableRef, rhs::Parameter)::ParametrizedAffExpr = PAE{Float64}(GAEv{Float64}([lhs],[1.],0),GAEp{Float64}([rhs],[-1.],0))
+(+)(lhs::JuMP.VariableRef, rhs::Parameter) = PAE{Float64}(GAEv{Float64}([lhs],[1.],0),GAEp{Float64}([rhs],[1.],0))
+(-)(lhs::JuMP.VariableRef, rhs::Parameter) = PAE{Float64}(GAEv{Float64}([lhs],[1.],0),GAEp{Float64}([rhs],[-1.],0))
 
 # VariableRef--GenericAffExpr{C,Parameter}
-(+)(lhs::JuMP.VariableRef, rhs::GAEp{C})::ParametrizedAffExpr{C} where {C} = PAE{C}(GAEv{C}([lhs],[1.],0),copy(rhs))
-(-)(lhs::JuMP.VariableRef, rhs::GAEp{C})::ParametrizedAffExpr{C} where {C} = PAE{C}(GAEv{C}([lhs],[1.],0),-rhs)
+(+)(lhs::JuMP.VariableRef, rhs::GAEp{C}) where {C} = PAE{C}(GAEv{C}([lhs],[1.],0),copy(rhs))
+(-)(lhs::JuMP.VariableRef, rhs::GAEp{C}) where {C} = PAE{C}(GAEv{C}([lhs],[1.],0),-rhs)
 
 # VariableRef--ParametrizedAffExpr{C}
-(+)(lhs::JuMP.VariableRef, rhs::PAE{C})::ParametrizedAffExpr{C} where {C} = PAE{C}(GAEv{C}([lhs],[1.],0),copy(rhs.p))
-(-)(lhs::JuMP.VariableRef, rhs::PAE{C})::ParametrizedAffExpr{C} where {C} = PAE{C}(GAEv{C}([lhs],[1.],0),-rhs.p)
+(+)(lhs::JuMP.VariableRef, rhs::PAE{C}) where {C} = PAE{C}(GAEv{C}([lhs],[1.],0),copy(rhs.p))
+(-)(lhs::JuMP.VariableRef, rhs::PAE{C}) where {C} = PAE{C}(GAEv{C}([lhs],[1.],0),-rhs.p)
 
 #=
     GenericAffExpr{C,VariableRef}
 =#
 
 # GenericAffExpr{C,VariableRef}--Parameter
-(+)(lhs::GAEv{C}, rhs::Parameter)::ParametrizedAffExpr{C} where {C} = (+)(rhs,lhs)
-(-)(lhs::GAEv{C}, rhs::Parameter)::ParametrizedAffExpr{C} where {C} = (+)(-rhs,lhs)
+(+)(lhs::GAEv{C}, rhs::Parameter) where {C} = (+)(rhs,lhs)
+(-)(lhs::GAEv{C}, rhs::Parameter) where {C} = (+)(-rhs,lhs)
 
 # GenericAffExpr{C,VariableRef}--GenericAffExpr{C,Parameter}
-(+)(lhs::GAEv{C}, rhs::GAEp{C})::ParametrizedAffExpr{C} where {C} = PAE{C}(copy(lhs),copy(rhs))
-(-)(lhs::GAEv{C}, rhs::GAEp{C})::ParametrizedAffExpr{C} where {C} = PAE{C}(copy(lhs),-rhs)
+(+)(lhs::GAEv{C}, rhs::GAEp{C}) where {C} = PAE{C}(copy(lhs),copy(rhs))
+(-)(lhs::GAEv{C}, rhs::GAEp{C}) where {C} = PAE{C}(copy(lhs),-rhs)
 
 # GenericAffExpr{C,VariableRef}--ParametrizedAffExpr{C}
-(+)(lhs::GAEv{C}, rhs::PAE{C})::ParametrizedAffExpr{C} where {C} = PAE{C}(lhs+rhs.v,copy(rhs.p))
-(-)(lhs::GAEv{C}, rhs::PAE{C})::ParametrizedAffExpr{C} where {C} = PAE{C}(lhs-rhs.v,-rhs.p)
+(+)(lhs::GAEv{C}, rhs::PAE{C}) where {C} = PAE{C}(lhs+rhs.v,copy(rhs.p))
+(-)(lhs::GAEv{C}, rhs::PAE{C}) where {C} = PAE{C}(lhs-rhs.v,-rhs.p)
 
 #=
     GenericAffExpr{C,Parameter}/GAEp
@@ -293,19 +293,19 @@ importall Base.Operators
 # DONE in JuMP
 
 # GenericAffExpr{C,Parameter}--VariableRef
-(+)(lhs::GAEp{C}, rhs::JuMP.VariableRef)::ParametrizedAffExpr{C} where {C} = (+)(rhs,lhs)
-(-)(lhs::GAEp{C}, rhs::JuMP.VariableRef)::ParametrizedAffExpr{C} where {C} = (-)(-rhs,lhs)
+(+)(lhs::GAEp{C}, rhs::JuMP.VariableRef) where {C} = (+)(rhs,lhs)
+(-)(lhs::GAEp{C}, rhs::JuMP.VariableRef) where {C} = (-)(-rhs,lhs)
 
 # GenericAffExpr{C,Parameter}--GenericAffExpr{C,VariableRef}
-(+)(lhs::GAEp{C}, rhs::GAEv{C})::ParametrizedAffExpr{C} where {C} = (+)(rhs,lhs)
-(-)(lhs::GAEp{C}, rhs::GAEv{C})::ParametrizedAffExpr{C} where {C} = (-)(-rhs,lhs)
+(+)(lhs::GAEp{C}, rhs::GAEv{C}) where {C} = (+)(rhs,lhs)
+(-)(lhs::GAEp{C}, rhs::GAEv{C}) where {C} = (-)(-rhs,lhs)
 
 # GenericAffExpr{C,Parameter}--GenericAffExpr{C,Parameter}
 # DONE in JuMP
 
 # GenericAffExpr{C,Parameter}--ParametrizedAffExpr{C}
-(+)(lhs::GAEp{C}, rhs::PAE{C})::ParametrizedAffExpr{C} where {C} = PAE{C}(copy(rhs.v),lhs+rhs.p)
-(-)(lhs::GAEp{C}, rhs::PAE{C})::ParametrizedAffExpr{C} where {C} = PAE{C}(-rhs.v,lhs-rhs.p)
+(+)(lhs::GAEp{C}, rhs::PAE{C}) where {C} = PAE{C}(copy(rhs.v),lhs+rhs.p)
+(-)(lhs::GAEp{C}, rhs::PAE{C}) where {C} = PAE{C}(-rhs.v,lhs-rhs.p)
 
 #=
     ParametrizedAffExpr{C}
@@ -317,21 +317,21 @@ importall Base.Operators
 (*)(lhs::PAE, rhs::Number) = (*)(rhs,lhs)
 
 # ParametrizedAffExpr{C}--Parameter
-(+)(lhs::PAE{C}, rhs::Parameter)::ParametrizedAffExpr{C} where {C} = (+)(rhs,lhs)
-(-)(lhs::PAE{C}, rhs::Parameter)::ParametrizedAffExpr{C} where {C} = (-)(-rhs,lhs)
+(+)(lhs::PAE{C}, rhs::Parameter) where {C} = (+)(rhs,lhs)
+(-)(lhs::PAE{C}, rhs::Parameter) where {C} = (-)(-rhs,lhs)
 
 # VariableRef--ParametrizedAffExpr{C}
-(+)(lhs::PAE{C}, rhs::JuMP.VariableRef)::ParametrizedAffExpr{C} where {C} = (+)(rhs,lhs)
-(-)(lhs::PAE{C}, rhs::JuMP.VariableRef)::ParametrizedAffExpr{C} where {C} = (-)(-rhs,lhs)
+(+)(lhs::PAE{C}, rhs::JuMP.VariableRef) where {C} = (+)(rhs,lhs)
+(-)(lhs::PAE{C}, rhs::JuMP.VariableRef) where {C} = (-)(-rhs,lhs)
 
 # ParametrizedAffExpr{C}--GenericAffExpr{C,VariableRef}
 # ParametrizedAffExpr{C}--GenericAffExpr{C,Parameter}
-(+)(lhs::PAE{C}, rhs::GAE{C,V})::ParametrizedAffExpr{C} where {C,V} = (+)(rhs,lhs)
-(-)(lhs::PAE{C}, rhs::GAE{C,V})::ParametrizedAffExpr{C} where {C,V} = (-)(-rhs,lhs)
+(+)(lhs::PAE{C}, rhs::GAE{C,V}) where {C,V} = (+)(rhs,lhs)
+(-)(lhs::PAE{C}, rhs::GAE{C,V}) where {C,V} = (-)(-rhs,lhs)
 
 # ParametrizedAffExpr{C}--ParametrizedAffExpr{C}
-(+)(lhs::PAE{C}, rhs::PAE{C})::ParametrizedAffExpr{C} where {C} = PAE{C}(lhs.v+rhs.v,lhs.p+rhs.p)
-(-)(lhs::PAE{C}, rhs::PAE{C})::ParametrizedAffExpr{C} where {C} = PAE{C}(lhs.v-rhs.v,lhs.p-rhs.p)
+(+)(lhs::PAE{C}, rhs::PAE{C}) where {C} = PAE{C}(lhs.v+rhs.v,lhs.p+rhs.p)
+(-)(lhs::PAE{C}, rhs::PAE{C}) where {C} = PAE{C}(lhs.v-rhs.v,lhs.p-rhs.p)
 
 
 # Build constraint

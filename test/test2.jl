@@ -1,7 +1,6 @@
-function test2(optimizer)
+function test2(args...)
     @testset "LessThan modification" begin
-        MOI.empty!(optimizer)
-        model = ModelWithParams(optimizer = optimizer)
+        model = ModelWithParams(args...)
         α = Parameter(model, 1.0)
         ParameterJuMP.setvalue!(α, -1.0)
         @variable(model, x)

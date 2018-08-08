@@ -7,14 +7,14 @@ using JuMP
 using ParameterJuMP
 
 using GLPK
-optimizer = GLPKOptimizerLP()
+factory = with_optimizer(GLPKOptimizerLP)
 
 include("test1.jl")
 include("test2.jl")
 
 @testset "ParameterJuMP tests" begin
-    test0(optimizer)
-    test1(optimizer)
-    test2(optimizer)
+    test0(factory)
+    test1(factory)
+    test2(factory)
 end
 ;
