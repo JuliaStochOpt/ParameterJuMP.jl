@@ -1,4 +1,3 @@
 julia 0.6
 JuMP 0.18
-GLPK
-GLPKMathProgInterface
+GLPK 0.6.1
