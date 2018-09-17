@@ -7,7 +7,7 @@ using JuMP
 using ParameterJuMP
 
 using GLPK
-factory = with_optimizer(GLPKOptimizerLP)
+factory = with_optimizer(GLPK.Optimizer)
 
 include("test1.jl")
 include("test2.jl")

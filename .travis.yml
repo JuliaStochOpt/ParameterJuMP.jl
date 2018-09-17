@@ -3,6 +3,8 @@ os:
     - linux
 julia:
     - 0.6
+    - 0.7
+    - 1.0
 matrix:
     allow_failures:
         - julia: nightly
@@ -16,9 +18,7 @@ addons:
         - libgmp-dev
         - libglpk-dev
 before_script:
-    - julia -e 'Pkg.add("MathOptInterface")'
-    - julia -e 'Pkg.add("JuMP")'
-    - julia -e 'Pkg.checkout("JuMP")'
+    - julia -e 'if VERSION >= "v0.7-"; using Pkg; Pkg.add("JuMP#master"); else Pkg.add("JuMP"); Pkg.checkout("JuMP"); end'
 after_success:
     - echo $TRAVIS_JULIA_VERSION
     # push coverage results to Codecov

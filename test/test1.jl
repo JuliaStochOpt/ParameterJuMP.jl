@@ -9,12 +9,12 @@ function test0(args...)
 
         @objective(m_slave, Min, 5*y[1])
 
-        JuMP.optimize(m_slave)
+        JuMP.optimize!(m_slave)
 
-        @test 5/3 ≈ JuMP.resultdual(ctr1) atol=1e-3
-        @test [-35/3, 0.0] ≈ JuMP.resultdual.(x) atol=1e-3
-        @test [-26/3, 0.0, 0.0, 0.0, 0.0, 0.0] ≈ JuMP.resultvalue.(y) atol=1e-3
-        @test -130/3 ≈ JuMP.objectivevalue(m_slave) atol=1e-3
+        @test 5/3 ≈ JuMP.result_dual(ctr1) atol=1e-3
+        @test [-35/3, 0.0] ≈ JuMP.result_dual.(x) atol=1e-3
+        @test [-26/3, 0.0, 0.0, 0.0, 0.0, 0.0] ≈ JuMP.result_value.(y) atol=1e-3
+        @test -130/3 ≈ JuMP.objective_value(m_slave) atol=1e-3
     end
 end
 
@@ -36,13 +36,13 @@ function test1(args...)
 
         @objective(m_slave, Min, 5*y[1])
 
-        JuMP.optimize(m_slave)
+        JuMP.optimize!(m_slave)
 
-        @test 5/3 ≈ JuMP.resultdual(ctr1) + JuMP.resultdual(ctr2) + JuMP.resultdual(ctr3) + JuMP.resultdual(ctr4) + JuMP.resultdual(ctr5) + JuMP.resultdual(ctr6) atol=1e-3
-        @test 0.0 ≈ JuMP.resultdual(ctr7) atol=1e-3
-        @test 0.0 ≈ JuMP.resultdual(ctr8) atol=1e-3
-        @test [0.0, 0.0, -35/3, 0.0, 0.0, 0.0] ≈ JuMP.JuMP.resultdual.(x) atol=1e-3
-        @test [-26/3, 0.0, 0.0, 0.0, 0.0, 0.0] ≈ JuMP.JuMP.resultvalue.(y) atol=1e-3
-        @test -130/3 ≈ JuMP.objectivevalue(m_slave) atol=1e-3
+        @test 5/3 ≈ JuMP.result_dual(ctr1) + JuMP.result_dual(ctr2) + JuMP.result_dual(ctr3) + JuMP.result_dual(ctr4) + JuMP.result_dual(ctr5) + JuMP.result_dual(ctr6) atol=1e-3
+        @test 0.0 ≈ JuMP.result_dual(ctr7) atol=1e-3
+        @test 0.0 ≈ JuMP.result_dual(ctr8) atol=1e-3
+        @test [0.0, 0.0, -35/3, 0.0, 0.0, 0.0] ≈ JuMP.JuMP.result_dual.(x) atol=1e-3
+        @test [-26/3, 0.0, 0.0, 0.0, 0.0, 0.0] ≈ JuMP.JuMP.result_value.(y) atol=1e-3
+        @test -130/3 ≈ JuMP.objective_value(m_slave) atol=1e-3
     end
 end
