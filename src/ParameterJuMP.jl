@@ -192,20 +192,8 @@ end
 # JuMP.GenericAffExpr{C,Parameter}(params::Vector{Parameter},coefs::Vector{C}) = JuMP.GenericAffExpr{C}(params,coefs,C(0.0))
 
 const PAE{C} = ParametrizedAffExpr{C}
-
-struct ParametrizedAffExprConstraint{S <: MOI.AbstractScalarSet} <: JuMP.AbstractConstraint
-    func::PAE{Float64}
-    set::S
-end
-
-const PAEC{S} = ParametrizedAffExprConstraint{S}
-
-struct ParametrizedVectorAffExprConstraint{S <: MOI.AbstractScalarSet} <: JuMP.AbstractConstraint
-    func::Vector{PAE{Float64}}
-    set::S
-end
-
-const PVAEC{S} = ParametrizedAffExprConstraint{S}
+const PAEC{S} = JuMP.ScalarConstraint{PAE{Float64}, S}
+const PVAEC{S} = JuMP.VectorConstraint{PAE{Float64}, S}
 
 # Operators
 # ------------------------------------------------------------------------------
@@ -351,7 +339,7 @@ function JuMP.build_constraint(_error::Function, aff::ParametrizedAffExpr, set::
     offset = aff.v.constant
     aff.v.constant = 0.0
     shifted_set = shift_constant(set, -offset)
-    return PAEC{typeof(shifted_set)}(aff, shifted_set)
+    return JuMP.ScalarConstraint(aff, shifted_set)
 end
 
 function JuMP.build_constraint(_error::Function, aff::ParametrizedAffExpr, lb, ub)
@@ -361,7 +349,7 @@ end
 function JuMP.add_constraint(m::JuMP.Model, c::PAEC, name::String="")
 
     # build LinearConstraint
-    c_lin = JuMP.AffExprConstraint(c.func.v, c.set)
+    c_lin = JuMP.ScalarConstraint(c.func.v, c.set)
 
     # JuMP´s standard add_constrint
     cref = JuMP.add_constraint(m, c_lin, name)
