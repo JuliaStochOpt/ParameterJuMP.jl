@@ -271,9 +271,7 @@ mutable struct ParametrizedAffExpr{C} <: JuMP.AbstractJuMPScalar
     p::JuMP.GenericAffExpr{C,Parameter}
 end
 
-if VERSION >= v"0.7-"
-    Base.broadcastable(expr::ParametrizedAffExpr) = Ref(expr)
-end
+Base.broadcastable(expr::ParametrizedAffExpr) = Ref(expr)
 
 # JuMP.GenericAffExpr{C,Parameter}(params::Vector{Parameter},coefs::Vector{C}) = JuMP.GenericAffExpr{C}(params,coefs,C(0.0))
 
