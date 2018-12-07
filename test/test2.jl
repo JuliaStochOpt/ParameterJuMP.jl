@@ -7,12 +7,12 @@ function test2(args...)
         cref = @constraint(model, x ≤ α)
         @objective(model, Max, x)
         JuMP.optimize!(model)
-        @test JuMP.result_value(x) == -1.0
-        @test JuMP.result_dual(cref) == -1.0
+        @test JuMP.value(x) == -1.0
+        @test JuMP.dual(cref) == -1.0
 
         ParameterJuMP.setvalue!(α, 2.0)
         JuMP.optimize!(model)
-        @test JuMP.result_value(x) == 2.0
-        @test JuMP.result_dual(cref) == -1.0
+        @test JuMP.value(x) == 2.0
+        @test JuMP.dual(cref) == -1.0
     end
 end

@@ -14,7 +14,7 @@ ModelWithParams, Parameter, Parameters
 
 struct Parameter <: JuMP.AbstractJuMPScalar
     ind::Int64 # local reference
-    m::JuMP.Model
+    model::JuMP.Model
 end
 JuMP.var_string(mode, ::Parameter) = "_param_"
 
@@ -60,12 +60,12 @@ mutable struct ParameterData
     end
 end
 
-getparamdata(p::Parameter) = p.m.ext[:params]::ParameterData
-getparamdata(m::JuMP.Model) = m.ext[:params]::ParameterData
-getmodel(p::Parameter) = p.m
+getparamdata(p::Parameter) = p.model.ext[:params]::ParameterData
+getparamdata(model::JuMP.Model) = model.ext[:params]::ParameterData
+getmodel(p::Parameter) = p.model
 
-function Parameter(m::JuMP.Model, val::Real)
-    params = getparamdata(m)::ParameterData
+function Parameter(model::JuMP.Model, val::Real)
+    params = getparamdata(model)::ParameterData
 
     # how to add parameters after solve
     # dont
@@ -88,16 +88,18 @@ function Parameter(m::JuMP.Model, val::Real)
 
     params.constraints_map[ind] = ParametrizedConstraintRef[]
 
-    return Parameter(ind, m)
+    return Parameter(ind, model)
 end
-Parameter(m) = Parameter(m, 0.0)
+Parameter(model) = Parameter(model, 0.0)
 
 addsizehint!(vec::Vector, len::Integer) = sizehint!(vec, len+length(vec))
 
-Parameters(m::JuMP.Model, N::Integer) = Parameters(m::JuMP.Model, zeros(N))
-function Parameters(m::JuMP.Model, val::Vector{R}) where R
+function Parameters(model::JuMP.Model, N::Integer)
+    return Parameters(model::JuMP.Model, zeros(N))
+end
+function Parameters(model::JuMP.Model, val::Vector{R}) where R
     # TIME: zero...
-    params = getparamdata(m)::ParameterData
+    params = getparamdata(model)::ParameterData
 
     # how to add parameters after solve
     # dont
@@ -129,7 +131,7 @@ function Parameters(m::JuMP.Model, val::Vector{R}) where R
 
         params.constraints_map[ind] = ParametrizedConstraintRef[]
 
-        push!(out, Parameter(ind, m))
+        push!(out, Parameter(ind, model))
     end
 
     return out
@@ -138,7 +140,7 @@ end
 # getters/setters
 # ------------------------------------------------------------------------------
 
-function JuMP.result_value(p::Parameter)
+function JuMP.value(p::Parameter)
     params = getparamdata(p)::ParameterData
     params.future_values[p.ind]
 end
@@ -147,7 +149,7 @@ function setvalue!(p::Parameter, val::Real)
     params.sync = false
     params.future_values[p.ind] = val
 end
-function JuMP.result_dual(p::Parameter)
+function JuMP.dual(p::Parameter)
     params = getparamdata(p)::ParameterData
     if params.lazy
         return _getdual(p)
@@ -157,13 +159,13 @@ function JuMP.result_dual(p::Parameter)
 end
 
 function _getdual(p::Parameter)
-    return _getdual(p.m, p.ind)
+    return _getdual(p.model, p.ind)
 end
 function _getdual(pcr::ParametrizedConstraintRef)::Float64
-    pcr.coef * JuMP.result_dual(pcr.cref)
+    pcr.coef * JuMP.dual(pcr.cref)
 end
-function _getdual(m::JuMP.Model, ind::Integer)
-    params = getparamdata(m)::ParameterData
+function _getdual(model::JuMP.Model, ind::Integer)
+    params = getparamdata(model)::ParameterData
     # See (12) in http://www.juliaopt.org/MathOptInterface.jl/stable/apimanual.html#Duals-1
     # in the dual objective: - sum_i b_i^T y_i
     # Here b_i depends on the param and is b_i' + coef * param
@@ -376,9 +378,9 @@ function update(pcr::ParametrizedConstraintRef{CI{F, S}}, Δ) where
     # For scalar constraints, the constant in the function is zero and the
     # constant is stored in the set. Since `pcr.coef` corresponds to the
     # coefficient in the function, we need to take `-pcr.coef`.
-    old_set = MOI.get(cref.m.moi_backend, MOI.ConstraintSet(), ci)
+    old_set = MOI.get(cref.model.moi_backend, MOI.ConstraintSet(), ci)
     new_set = shift_constant(old_set, -pcr.coef * Δ)
-    MOI.set(cref.m.moi_backend, MOI.ConstraintSet(), ci, new_set)
+    MOI.set(cref.model.moi_backend, MOI.ConstraintSet(), ci, new_set)
 end
 
 function sync(data::ParameterData)
