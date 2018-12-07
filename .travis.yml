@@ -2,7 +2,6 @@ language: julia
 os:
     - linux
 julia:
-    - 0.6
     - 0.7
     - 1.0
 matrix:
@@ -18,7 +17,7 @@ addons:
         - libgmp-dev
         - libglpk-dev
 before_script:
-    - julia -e 'if VERSION >= v"0.7-"; using Pkg; Pkg.add(PackageSpec(name="JuMP", rev="master")); else Pkg.add("JuMP"); Pkg.checkout("JuMP"); end'
+    - julia -e 'using Pkg; Pkg.add(PackageSpec(name="JuMP", rev="master"))'
 after_success:
     - echo $TRAVIS_JULIA_VERSION
     # push coverage results to Codecov
