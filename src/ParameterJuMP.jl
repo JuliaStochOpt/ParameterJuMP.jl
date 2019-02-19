@@ -16,7 +16,7 @@ struct Parameter <: JuMP.AbstractJuMPScalar
     ind::Int64 # local reference
     model::JuMP.Model
 end
-JuMP.var_string(mode, ::Parameter) = "_param_"
+JuMP.function_string(mode, ::Parameter) = "_param_"
 
 # Reference to a constraint in which the parameter has coefficient coef
 struct ParametrizedConstraintRef{C}
