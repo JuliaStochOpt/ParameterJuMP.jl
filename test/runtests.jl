@@ -8,12 +8,18 @@ using ParameterJuMP
 using GLPK
 factory = with_optimizer(GLPK.Optimizer)
 
-include("test1.jl")
-include("test2.jl")
+include("tests.jl")
 
 @testset "ParameterJuMP tests" begin
     test0(factory)
     test1(factory)
     test2(factory)
+    test3(factory)
+    test4(factory)
+    test5(factory)
+    test6(factory)
+    test7(factory)
+    test8(factory)
+    test9(factory)
 end
 ;

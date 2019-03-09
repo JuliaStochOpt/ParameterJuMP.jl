@@ -24,11 +24,11 @@ struct ParametrizedConstraintRef{C}
     coef::Float64
 end
 
-CtrRef{F, S} = ConstraintRef{Model,MathOptInterface.ConstraintIndex{F,S}, JuMP.ScalarShape}
-SAF = MathOptInterface.ScalarAffineFunction{Float64}
-EQ = MathOptInterface.EqualTo{Float64}
-LE = MathOptInterface.LessThan{Float64}
-GE = MathOptInterface.GreaterThan{Float64}
+const CtrRef{F, S} = ConstraintRef{Model,MathOptInterface.ConstraintIndex{F,S}, JuMP.ScalarShape}
+const SAF = MathOptInterface.ScalarAffineFunction{Float64}
+const EQ = MathOptInterface.EqualTo{Float64}
+const LE = MathOptInterface.LessThan{Float64}
+const GE = MathOptInterface.GreaterThan{Float64}
 
 mutable struct ParameterData
     inds::Vector{Int64}
@@ -72,22 +72,44 @@ mutable struct ParameterData
             )
     end
 end
+
+lazy_duals(data::ParameterData) = data.lazy
+lazy_duals(model::JuMP.Model) = lazy_duals(getparamdata(model)) 
 set_lazy_duals(model::JuMP.Model) = set_lazy_duals(getparamdata(model))
 function set_lazy_duals(data::ParameterData)
-    data.lazy = true
+    if isempty(data.current_values)
+        data.lazy = true
+    elseif lazy_duals(data)
+        @warn "Lazy mode is already activated"
+    else
+        error("Parameter JuMP's lazy mode can only be activated in empty models.")
+    end
 end
 set_not_lazy_duals(model::JuMP.Model) = set_not_lazy_duals(getparamdata(model))
 function set_not_lazy_duals(data::ParameterData)
-    data.lazy = false
+    if isempty(data.current_values)
+        data.lazy = false
+    elseif !lazy_duals(data)
+        @warn "Lazy mode is already de-activated"
+    else
+        error("Parameter JuMP's lazy mode can only be de-activated in empty models.")
+    end
 end
 
 get_param_dict(data::ParameterData, ::Type{EQ}) = data.parameters_map_saf_in_eq
 get_param_dict(data::ParameterData, ::Type{LE}) = data.parameters_map_saf_in_le
 get_param_dict(data::ParameterData, ::Type{GE}) = data.parameters_map_saf_in_ge
 
-getparamdata(p::Parameter) = p.model.ext[:params]::ParameterData
-getparamdata(model::JuMP.Model) = model.ext[:params]::ParameterData
 getmodel(p::Parameter) = p.model
+getparamdata(p::Parameter) = getparamdata(getmodel(p))::ParameterData
+# getparamdata(model::JuMP.Model) = model.ext[:params]::ParameterData
+function getparamdata(model::JuMP.Model)
+    !haskey(model.ext, :params) && error("In order to use Parameters the model must be created with the ModelWithParams constructor")
+    return model.ext[:params]
+end
+
+is_sync(data::ParameterData) = data.sync
+is_sync(model::JuMP.Model) = is_sync(getparamdata(model))
 
 function Parameter(model::JuMP.Model, val::Real)
     params = getparamdata(model)::ParameterData
@@ -97,7 +119,7 @@ function Parameter(model::JuMP.Model, val::Real)
     # how to delete parameter
     # dont
     if params.solved
-        error()
+        error("Parameters cannot be added if a model was already solved")
     end
 
     ind = params.next_ind
@@ -123,7 +145,6 @@ function Parameters(model::JuMP.Model, N::Integer)
     return Parameters(model::JuMP.Model, zeros(N))
 end
 function Parameters(model::JuMP.Model, val::Vector{R}) where R
-    # TIME: zero...
     params = getparamdata(model)::ParameterData
 
     # how to add parameters after solve
@@ -131,7 +152,7 @@ function Parameters(model::JuMP.Model, val::Vector{R}) where R
     # how to delete parameter
     # dont
     if params.solved
-        error()
+        error("Parameters cannot be added if a model was already solved")
     end
 
     nparam = length(val)
@@ -176,7 +197,7 @@ function setvalue!(p::Parameter, val::Real)
 end
 function JuMP.dual(p::Parameter)
     params = getparamdata(p)::ParameterData
-    if params.lazy
+    if lazy_duals(params)
         return _getdual(p)
     else
         return params.dual_values[p.ind]
@@ -235,7 +256,7 @@ Base.:(-)(lhs::C, rhs::Parameter) where C<:Number = PAE{C}(GAEv{C}(convert(Float
 Base.:(*)(lhs::C, rhs::Parameter) where C<:Number = PAE{C}(GAEv{C}(zero(C)), GAEp{C}(zero(C), rhs => lhs))
 
 # Number--PAE
-Base.:(+)(lhs::Number, rhs::PAE{C}) where C<:Number = error("ruim")#PAE{C}(lhs+rhs.v, copy(rhs.p))
+Base.:(+)(lhs::Number, rhs::PAE{C}) where C<:Number = PAE{C}(lhs+rhs.v, copy(rhs.p))
 Base.:(-)(lhs::Number, rhs::PAE{C}) where C<:Number = PAE{C}(lhs-rhs.v,-rhs.p)
 Base.:(*)(lhs::Number, rhs::PAE{C}) where C<:Number = PAE{C}(lhs*rhs.v, lhs*rhs.p)
 
@@ -381,17 +402,16 @@ function JuMP.add_constraint(m::JuMP.Model, c::PAEC{S}, name::String="") where S
     # JuMP´s standard add_constrint
     cref = JuMP.add_constraint(m, c_lin, name)
 
-    # collect indices to constants
-    # TIME 1/3
-    # TODO just save ParamAffExpr
     data = getparamdata(m)::ParameterData
 
-    # OLD
     # needed for lazy get dual
-    # for (param, coef) in c.func.p.terms
-    #     push!(data.constraints_map[param.ind], ParametrizedConstraintRef(cref, coef))
-    # end
+    if lazy_duals(data)
+        for (param, coef) in c.func.p.terms
+            push!(data.constraints_map[param.ind], ParametrizedConstraintRef(cref, coef))
+        end
+    end
 
+    # save the parameter part of a parametric affine expression
     get_param_dict(data, S)[cref] = c.func.p
 
     return cref
@@ -400,34 +420,8 @@ end
 # solve
 # ------------------------------------------------------------------------------
 
-const CI{F, S} = MOI.ConstraintIndex{F, S}
-function update(pcr::ParametrizedConstraintRef{CI{F, S}}, Δ) where
-               {F <: MOI.AbstractScalarFunction, S <: MOI.AbstractScalarSet}
-    cref = pcr.cref
-    ci = JuMP.index(cref)
-    # For scalar constraints, the constant in the function is zero and the
-    # constant is stored in the set. Since `pcr.coef` corresponds to the
-    # coefficient in the function, we need to take `-pcr.coef`.
-    old_set = MOI.get(cref.model.moi_backend, MOI.ConstraintSet(), ci)
-    new_set = shift_constant(old_set, -pcr.coef * Δ)
-    MOI.set(cref.model.moi_backend, MOI.ConstraintSet(), ci, new_set)
-end
-
 function sync(data::ParameterData)
-    if !data.sync
-        # OLD
-        # for i in eachindex(data.current_values)
-        #     Δ = data.future_values[i] - data.current_values[i]
-        #     if !iszero(Δ)
-        #         # modifying constraints multiple times
-        #         for pcr in data.constraints_map[i]
-        #             update(pcr, Δ)
-        #         end
-        #     end
-        #     data.current_values[i] = data.future_values[i]
-        # end
-        # data.sync = true
-
+    if !is_sync(data)
         update_constraints(data, EQ)
         update_constraints(data, LE)
         update_constraints(data, GE)
@@ -461,30 +455,29 @@ end
 function param_optimizehook(m::JuMP.Model; kwargs...)
     data = getparamdata(m)::ParameterData
 
+    # sync model rhs to newest parameter values
     sync(data)
 
     ret = JuMP.optimize!(m::JuMP.Model, ignore_optimize_hook = true, kwargs...)
     data.solved = true
 
-    if !data.lazy
-        # error("not lazy not supported")
+    if !lazy_duals(data) && JuMP.has_duals(m)
         fill!(data.dual_values, 0.0)
-        lazy_duals(data, EQ)
-        lazy_duals(data, GE)
-        lazy_duals(data, LE)
+        update_duals(data, EQ)
+        update_duals(data, GE)
+        update_duals(data, LE)
     end
-    # print_timer()
     return ret
 end
 
-function lazy_duals(data, ::Type{S}) where S
+function update_duals(data, ::Type{S}) where S
     for (cref, gaep) in get_param_dict(data, S)
-        lazy_dual(data, cref, gaep)
+        update_duals(data, cref, gaep)
     end
     return nothing
 end
 
-function lazy_dual(data, cref, gaep)
+function update_duals(data, cref, gaep)
     dual_sol = JuMP.dual(cref)
     @inbounds for (param, coef) in gaep.terms
         data.dual_values[param.ind] -= coef * dual_sol
