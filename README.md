@@ -19,24 +19,23 @@ A JuMP extension to use parameters in constraints constants.
 ## Motivation
 
 Suppose we have linear programming problem of the following form
+<img src="http://latex.codecogs.com/gif.latex?x" border="0"/>
 
-\begin{align}
-    & \text{minimize}_x && c^T x \
-    & \text{subject to} && A x = b - D y \
-    &                   && x \geq 0 \
-\end{align}
+<p align="center">
+<img src="https://latex.codecogs.com/gif.latex?\begin{array}{ll}&space;\mbox{minimize}&space;&&space;c^\top&space;x\\&space;\mbox{subject&space;to}&space;&&space;Ax&space;&space;=&space;b&space;-&minus;D&space;y&space;\\&space;&&space;s&space;\geq&space;0,&space;\end{array}" title=""/>
+</p>
 
-The only decision variable in the problem is $x$.
-On the other hand, $y$ is a mere parameter.
+The only decision variable in the problem is <img src="http://latex.codecogs.com/gif.latex?x" border="0"/>.
+On the other hand, <img src="http://latex.codecogs.com/gif.latex?y" border="0"/> is a mere parameter.
 
 Problems like this appear frequently in Stochastic optimization and in Decomposition frameworks.
 
 In stochastic optimization it is frequent to solve that same problem for
-multiple values of $y$, which are tipically scenario dependent.
+multiple values of <img src="http://latex.codecogs.com/gif.latex?y" border="0"/>, which are tipically scenario dependent.
 
 In decomposition frameworks, it is useful to solve the same problem
-for multiple values of $y$, but even more important is to be able
-to query dual values from $y$. This dual values are computed by applying
+for multiple values of <img src="http://latex.codecogs.com/gif.latex?y" border="0"/>, but even more important is to be able
+to query dual values from <img src="http://latex.codecogs.com/gif.latex?y" border="0"/>. This dual values are computed by applying
 the chain rule on the duals of the constraints.
 
 In pure JuMP we can acomplish these tasks by creating dummy fixed variables.
