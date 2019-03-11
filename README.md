@@ -216,5 +216,5 @@ y_duals = dual.(y)
 ## Acknowledgments
 
 ParameterJuMP was developed by:
- - Joaquim Dias Garcia (@joaquimg) - PSR and PUC-Rio
- - Benoit Legat (@blegat) - UCLouvain
+ - Joaquim Dias Garcia (@joaquimg), PSR and PUC-Rio
+ - Benoît Legat (@blegat),  UCLouvain

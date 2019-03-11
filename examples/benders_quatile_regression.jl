@@ -632,4 +632,4 @@ plot!(plt, time, y2)
 
 #' # Acknowledgments
 
-#' ParameterJuMP was develope by Joaquim Dias Garcia (@joaquimg) and Benoit Legat (@blegat)
+#' ParameterJuMP was develope by Joaquim Dias Garcia (@joaquimg) and Benoît Legat (@blegat)
