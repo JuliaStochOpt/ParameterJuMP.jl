@@ -629,3 +629,7 @@ plt = plot(time, y,
     xlabel = "Time (s)", ylabel = "Amplitude")
 plot!(plt, time, y1)
 plot!(plt, time, y2)
+
+#' # Acknowledgments
+
+#' ParameterJuMP was develope by Joaquim Dias Garcia (@joaquimg) and Benoit Legat (@blegat)
