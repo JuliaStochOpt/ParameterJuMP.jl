@@ -3,6 +3,8 @@
 #' author: Joaquim Dias Garcia
 #' date: March 9th 2019
 #' options:
+#'     github:
+#'         out_path : markdown
 #'     md2html:
 #'         out_path : html
 #'     md2pdf:
@@ -79,7 +81,7 @@ gr(); # plotting backend
 #' In this notebook we will solver a problem where the explanatory variables
 #' are sinusoids of differents frequencies
 
-#' First, we define the numebr of explanatory variables and observations
+#' First, we define the number of explanatory variables and observations
 
 #+ echo = false
 
@@ -109,7 +111,7 @@ const Candidates = 1:N_Candidates
 const Nodes = 1:N_Nodes
 ;
 
-#' Initialize a random numebr generator to keep results deterministic
+#' Initialize a random number generator to keep results deterministic
 
 rng = Random.MersenneTwister(123);
 
@@ -632,4 +634,8 @@ plot!(plt, time, y2)
 
 #' # Acknowledgments
 
-#' ParameterJuMP was develope by Joaquim Dias Garcia (@joaquimg) and Benoît Legat (@blegat)
+#' ParameterJuMP was developed by Joaquim Dias Garcia (@joaquimg) and Benoît Legat (@blegat)
+
+#+ echo=false
+# using Weave; cd("C:\\Users\\joaquimgarcia\\.julia\\dev\\ParameterJuMP\\examples"); weave("benders_quatile_regression.jl"); weave("benders_quatile_regression.jl", doctype = "github"); weave("benders_quatile_regression.jl", doctype = "md2pdf")
+#+
