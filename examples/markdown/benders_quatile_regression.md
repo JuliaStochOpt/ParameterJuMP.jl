@@ -288,8 +288,8 @@ N_Observations*N_Candidates < 10_000_000 && full_model_regression()
 
 
 ````
-0.030339 seconds (60.34 k allocations: 13.307 MiB, 37.11% gc time)
-  0.693977 seconds (129.57 k allocations: 13.432 MiB, 0.99% gc time)
+0.030208 seconds (60.34 k allocations: 13.307 MiB, 37.38% gc time)
+  0.710091 seconds (129.57 k allocations: 13.432 MiB, 1.11% gc time)
 value.(β)[1:min(10, N_Candidates)] = [3.76377, 0.790012, 0.878022, 0.056315
 5, 0.0876301, 0.314878, 0.00317523, 0.148887, 0.120253, 0.242875]
 objective_value(full_model) = 42.62768238530737
@@ -806,32 +806,32 @@ Initialize Iterative step
 (k, LB, UB) = (6, 40.587767838387414, 45.263955986446454)
 (k, LB, UB) = (7, 42.040356808876794, 44.03470247234688)
 Converged!
-  1.224445 seconds (2.51 M allocations: 114.380 MiB, 4.61% gc time)
+  1.273683 seconds (2.51 M allocations: 114.380 MiB, 4.81% gc time)
 (solution[1])[1:min(10, N_Candidates)] = [3.76267, 0.792786, 0.873536, 0.05
 58342, 0.0914146, 0.312128, -0.00148945, 0.155308, 0.121462, 0.236182]
 solution[2] = 42.040356808876794
  ─────────────────────────────────────────────────────────────────────────
                                   Time                   Allocations      
                           ──────────────────────   ───────────────────────
-     Tot / % measured:         1.91s / 100%             261MiB / 100%     
+     Tot / % measured:         1.97s / 100%             261MiB / 100%     
 
  Section          ncalls     time   %tot     avg     alloc   %tot      avg
  ─────────────────────────────────────────────────────────────────────────
- Loop                  1    1.22s  64.2%   1.22s    114MiB  43.8%   114MiB
-   solve nodes         7    838ms  43.9%   120ms   96.6MiB  37.0%  13.8MiB
-     opt             700    512ms  26.8%   731μs   2.49MiB  0.95%  3.64KiB
-     fix             700    195ms  10.2%   278μs   73.8MiB  28.3%   108KiB
-     dual            700    123ms  6.43%   175μs   20.0MiB  7.66%  29.3KiB
-   solve master        7    278ms  14.6%  39.7ms   1.55MiB  0.60%   227KiB
-   add cuts            7   80.9ms  4.24%  11.6ms   14.7MiB  5.63%  2.10MiB
- Init                  1    682ms  35.8%   682ms    147MiB  56.2%   147MiB
-   Cuts                1    531ms  27.8%   531ms    101MiB  38.9%   101MiB
-     opt             100    411ms  21.6%  4.11ms   93.3MiB  35.7%   955KiB
-     dual            100   28.9ms  1.51%   289μs   2.86MiB  1.09%  29.3KiB
-     fix             100   1.65ms  0.09%  16.5μs    633KiB  0.24%  6.33KiB
-   Slaves              1    150ms  7.86%   150ms   44.9MiB  17.2%  44.9MiB
-   Master              1    533μs  0.03%   533μs    148KiB  0.06%   148KiB
-   Sol                 1    428ns  0.00%   428ns      928B  0.00%     928B
+ Loop                  1    1.27s  64.6%   1.27s    114MiB  43.8%   114MiB
+   solve nodes         7    871ms  44.2%   124ms   96.6MiB  37.0%  13.8MiB
+     opt             700    533ms  27.0%   762μs   2.49MiB  0.95%  3.64KiB
+     fix             700    203ms  10.3%   290μs   73.8MiB  28.3%   108KiB
+     dual            700    126ms  6.41%   180μs   20.0MiB  7.66%  29.3KiB
+   solve master        7    285ms  14.4%  40.7ms   1.55MiB  0.60%   227KiB
+   add cuts            7   89.1ms  4.52%  12.7ms   14.7MiB  5.63%  2.10MiB
+ Init                  1    698ms  35.4%   698ms    147MiB  56.2%   147MiB
+   Cuts                1    553ms  28.0%   553ms    101MiB  38.9%   101MiB
+     opt             100    447ms  22.7%  4.47ms   93.3MiB  35.7%   955KiB
+     dual            100   17.2ms  0.87%   172μs   2.86MiB  1.09%  29.3KiB
+     fix             100   1.76ms  0.09%  17.6μs    633KiB  0.24%  6.33KiB
+   Slaves              1    144ms  7.29%   144ms   44.9MiB  17.2%  44.9MiB
+   Master              1    585μs  0.03%   585μs    148KiB  0.06%   148KiB
+   Sol                 1    855ns  0.00%   855ns      928B  0.00%     928B
  ─────────────────────────────────────────────────────────────────────────
 ````
 
@@ -853,39 +853,39 @@ Build initial solution
 Build slave problems
 Build initial cuts
 Initialize Iterative step
-(k, LB, UB) = (1, 0.0, 736.9397549915209)
-(k, LB, UB) = (2, 0.0, 736.9397549915209)
-(k, LB, UB) = (3, 16.349215016228925, 91.35425023118788)
-(k, LB, UB) = (4, 28.27109871462454, 55.07825912215957)
-(k, LB, UB) = (5, 36.35333651603328, 50.107004243490096)
-(k, LB, UB) = (6, 40.58776783838726, 45.26395598644719)
-(k, LB, UB) = (7, 42.04035680887688, 44.03470247234724)
+(k, LB, UB) = (1, 0.0, 736.939754991521)
+(k, LB, UB) = (2, 0.0, 736.939754991521)
+(k, LB, UB) = (3, 16.349215016228793, 91.35425023118795)
+(k, LB, UB) = (4, 28.271098714623847, 55.07825912215962)
+(k, LB, UB) = (5, 36.35333651603358, 50.10700424349124)
+(k, LB, UB) = (6, 40.58776783838717, 45.263955986446874)
+(k, LB, UB) = (7, 42.04035680887724, 44.03470247234683)
 Converged!
-  0.696605 seconds (416.20 k allocations: 26.329 MiB, 2.43% gc time)
+  0.757100 seconds (416.20 k allocations: 26.329 MiB, 2.67% gc time)
 (solution[1])[1:min(10, N_Candidates)] = [3.76267, 0.792786, 0.873536, 0.05
 58342, 0.0914146, 0.312128, -0.00148945, 0.155308, 0.121462, 0.236182]
-solution[2] = 42.04035680887688
+solution[2] = 42.04035680887724
  ─────────────────────────────────────────────────────────────────────────
                                   Time                   Allocations      
                           ──────────────────────   ───────────────────────
-     Tot / % measured:         1.02s / 100%            64.6MiB / 100%     
+     Tot / % measured:         1.09s / 100%            64.6MiB / 100%     
 
  Section          ncalls     time   %tot     avg     alloc   %tot      avg
  ─────────────────────────────────────────────────────────────────────────
- Loop                  1    697ms  68.1%   697ms   26.3MiB  40.8%  26.3MiB
-   solve nodes         7    361ms  35.3%  51.5ms   10.4MiB  16.1%  1.49MiB
-     opt             700    340ms  33.3%   486μs   8.34MiB  12.9%  12.2KiB
-     dual            700   10.5ms  1.03%  15.1μs   1.09MiB  1.69%  1.59KiB
-     fix             700   3.47ms  0.34%  4.96μs    613KiB  0.93%     896B
-   solve master        7    278ms  27.2%  39.7ms   1.55MiB  2.40%   227KiB
-   add cuts            7   56.2ms  5.49%  8.02ms   14.3MiB  22.2%  2.05MiB
- Init                  1    327ms  31.9%   327ms   38.3MiB  59.2%  38.3MiB
-   Cuts                1    242ms  23.6%   242ms   17.4MiB  26.9%  17.4MiB
-     opt             100    135ms  13.2%  1.35ms   11.4MiB  17.7%   117KiB
-     dual            100   2.53ms  0.25%  25.3μs    159KiB  0.24%  1.59KiB
-     fix             100    463μs  0.05%  4.63μs   87.5KiB  0.13%     896B
-   Slaves              1   83.0ms  8.11%  83.0ms   20.7MiB  32.1%  20.7MiB
-   Master              1   1.28ms  0.13%  1.28ms    148KiB  0.22%   148KiB
+ Loop                  1    757ms  69.7%   757ms   26.3MiB  40.8%  26.3MiB
+   solve nodes         7    386ms  35.5%  55.1ms   10.4MiB  16.1%  1.49MiB
+     opt             700    363ms  33.4%   518μs   8.34MiB  12.9%  12.2KiB
+     dual            700   12.6ms  1.16%  18.0μs   1.09MiB  1.69%  1.59KiB
+     fix             700   3.82ms  0.35%  5.46μs    613KiB  0.93%     896B
+   solve master        7    307ms  28.3%  43.9ms   1.55MiB  2.40%   227KiB
+   add cuts            7   62.0ms  5.71%  8.86ms   14.3MiB  22.2%  2.05MiB
+ Init                  1    329ms  30.3%   329ms   38.3MiB  59.2%  38.3MiB
+   Cuts                1    242ms  22.3%   242ms   17.4MiB  26.9%  17.4MiB
+     opt             100    139ms  12.8%  1.39ms   11.4MiB  17.7%   117KiB
+     dual            100   2.66ms  0.25%  26.6μs    159KiB  0.24%  1.59KiB
+     fix             100    456μs  0.04%  4.56μs   87.5KiB  0.13%     896B
+   Slaves              1   85.2ms  7.84%  85.2ms   20.7MiB  32.1%  20.7MiB
+   Master              1    733μs  0.07%   733μs    148KiB  0.22%   148KiB
    Sol                 1    428ns  0.00%   428ns      928B  0.00%     928B
  ─────────────────────────────────────────────────────────────────────────
 ````

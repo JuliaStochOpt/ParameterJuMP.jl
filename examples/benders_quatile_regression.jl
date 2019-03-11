@@ -637,5 +637,5 @@ plot!(plt, time, y2)
 #' ParameterJuMP was developed by Joaquim Dias Garcia (@joaquimg) and Benoît Legat (@blegat)
 
 #+ echo=false
-# using Weave; cd("C:\\Users\\joaquimgarcia\\.julia\\dev\\ParameterJuMP\\examples"); weave("benders_quatile_regression.jl"); weave("benders_quatile_regression.jl", doctype = "github"); weave("benders_quatile_regression.jl", doctype = "md2pdf")
+# using Weave; cd("C:\\Users\\joaquimgarcia\\.julia\\dev\\ParameterJuMP\\examples"); weave("benders_quatile_regression.jl"); weave("benders_quatile_regression.jl", doctype = "github");# weave("benders_quatile_regression.jl", doctype = "md2pdf")
 #+
