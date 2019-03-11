@@ -24,31 +24,41 @@ parameters in optimization problems.
 To enable the usage of ParameterJuMP the optimization model must
 be constructed with the function:
 
-`ModelWithParam(args...)`
+```julia
+ModelWithParam(args...)
+```
 
 Which can receive the same inputs as the original `Model` constructor,
 and also returns the same `Model` type.
 
 The key constructor of ParameterJuMP is:
 
-`Parameter(model::JuMP.Model, value::Number)`
+```julia
+Parameter(model::JuMP.Model, value::Number)
+```
 
 Which adds a parameter fixed at `value` to the JuMP model: `model`.
 It is possible to create mutiple parameters at the same time with:
 
-`Parameters(model::JuMP.Model, values::Vector{Number})`
+```julia
+Parameters(model::JuMP.Model, values::Vector{Number})
+```
 
 Which returns a vector of parameters.
 
 It is possible to change the current value of a parameter with the
 function:
 
-`ParameterJuMP.setvalue(p::Parameter, new_value::Number)`
+```julia
+ParameterJuMP.setvalue(p::Parameter, new_value::Number)
+```
 
 Finally, the `dual` function of JuMP is overloaded to return duals
 for parameters:
 
-`dual(p::Parameter)`
+```julia
+dual(p::Parameter)
+```
 
 Last but not least!
 The parameter algebra was implemented so that is possible to:
