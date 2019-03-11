@@ -86,7 +86,7 @@ function bench_create_param(N_Parameters::Int, N_Variables::Int, N_Constraints::
     @timeit to "ctr mixed2 params" add_constraints_3(model, x, x, N_Constraints)
     @timeit to "ctr mixed2 both" add_constraints_3(model, x, y, N_Constraints)
 
-    data = ParameterJuMP.getparamdata(model)::ParameterJuMP.ParameterData
+    data = ParameterJuMP._getparamdata(model)::ParameterJuMP.ParameterData
     @timeit to "sync" ParameterJuMP.sync(data)
 
     @timeit to "solve" optimize!(model)

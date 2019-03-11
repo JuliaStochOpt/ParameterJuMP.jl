@@ -31,6 +31,9 @@ const LE = MathOptInterface.LessThan{Float64}
 const GE = MathOptInterface.GreaterThan{Float64}
 
 mutable struct ParameterData
+
+    ind_map::Dict{Int64, Int64}
+
     inds::Vector{Int64}
     next_ind::Int64
 
@@ -57,7 +60,9 @@ mutable struct ParameterData
     lazy::Bool
     dual_values::Vector{Float64}
     function ParameterData()
-        new(Int64[],
+        new(
+            Dict{Int64, Int64}(),
+            Int64[],
             1,
             Float64[],
             Float64[],
@@ -125,16 +130,11 @@ Adds one parameter fixed at zero to the model `model`.
 function Parameter(model::JuMP.Model, val::Real)
     params = _getparamdata(model)::ParameterData
 
-    # how to add parameters after solve
-    # dont
-    # how to delete parameter
-    # dont
-    if params.solved
-        error("Parameters cannot be added if a model was already solved")
-    end
-
     ind = params.next_ind
     params.next_ind += 1
+
+    # global to local map
+    params.ind_map[ind] = length(params.current_values)+1
 
     push!(params.inds, ind)
     push!(params.current_values, 0.0)
@@ -167,14 +167,6 @@ end
 function Parameters(model::JuMP.Model, val::Vector{R}) where R
     params = _getparamdata(model)::ParameterData
 
-    # how to add parameters after solve
-    # dont
-    # how to delete parameter
-    # dont
-    if params.solved
-        error("Parameters cannot be added if a model was already solved")
-    end
-
     nparam = length(val)
     out = Parameter[]
     sizehint!(out, nparam)
@@ -183,9 +175,13 @@ function Parameters(model::JuMP.Model, val::Vector{R}) where R
     _addsizehint!(params.future_values, nparam)
     _addsizehint!(params.dual_values, nparam)
 
+    max_local_index = length(params.current_values)
+    #? sizehint
     for i in 1:nparam
         ind = params.next_ind
         params.next_ind += 1
+
+        params.ind_map[ind] = max_local_index+i
 
         push!(params.inds, ind)
         push!(params.current_values, 0.0)
@@ -203,12 +199,15 @@ function Parameters(model::JuMP.Model, val::Vector{R}) where R
     return out
 end
 
+_local_index(params::ParameterData, p::Parameter) = params.ind_map[p.ind]
+_local_index(p::Parameter) = _local_index(_getparamdata(p)::ParameterData, p)
+
 # getters/setters
 # ------------------------------------------------------------------------------
 
 function JuMP.value(p::Parameter)
     params = _getparamdata(p)::ParameterData
-    params.future_values[p.ind]
+    params.future_values[_local_index(p)]
 end
 
 """
@@ -219,7 +218,7 @@ Sets the parameter `p` to the new value `val`.
 function setvalue!(p::Parameter, val::Real)
     params = _getparamdata(p)::ParameterData
     params.sync = false
-    params.future_values[p.ind] = val
+    params.future_values[_local_index(p)] = val
     return nothing
 end
 function JuMP.dual(p::Parameter)
@@ -227,12 +226,12 @@ function JuMP.dual(p::Parameter)
     if lazy_duals(params)
         return _getdual(p)
     else
-        return params.dual_values[p.ind]
+        return params.dual_values[_local_index(p)]
     end
 end
 
 function _getdual(p::Parameter)
-    return _getdual(p.model, p.ind)
+    return _getdual(p.model, _local_index(p))
 end
 function _getdual(pcr::ParametrizedConstraintRef)::Float64
     pcr.coef * JuMP.dual(pcr.cref)
@@ -303,8 +302,8 @@ function JuMP.add_constraint(m::JuMP.Model, c::PAEC{S}, name::String="") where S
 
     # needed for lazy get dual
     if lazy_duals(data)
-        for (param, coef) in c.func.p.terms
-            push!(data.constraints_map[param.ind], ParametrizedConstraintRef(cref, coef))
+        for (p, coef) in c.func.p.terms
+            push!(data.constraints_map[_local_index(p)], ParametrizedConstraintRef(cref, coef))
         end
     end
 
@@ -348,8 +347,8 @@ function _update_constraint(data, cref, gaep)
     # coefficient in the function, we need to take `-pcr.coef`.
     old_set = MOI.get(cref.model.moi_backend, MOI.ConstraintSet(), ci)
     val = 0.0
-    @inbounds for (param, coef) in gaep.terms
-        val += coef * (data.future_values[param.ind] - data.current_values[param.ind])
+    @inbounds for (p, coef) in gaep.terms
+        val += coef * (data.future_values[_local_index(p)] - data.current_values[_local_index(p)])
     end
     new_set = _shift_constant(old_set, -val)
     MOI.set(cref.model.moi_backend, MOI.ConstraintSet(), ci, new_set)
@@ -384,8 +383,8 @@ end
 
 function _update_duals(data, cref, gaep)
     dual_sol = JuMP.dual(cref)
-    @inbounds for (param, coef) in gaep.terms
-        data.dual_values[param.ind] -= coef * dual_sol
+    @inbounds for (p, coef) in gaep.terms
+        data.dual_values[_local_index(p)] -= coef * dual_sol
     end
     return nothing
 end
