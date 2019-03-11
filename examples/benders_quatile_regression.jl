@@ -172,7 +172,7 @@ plot!(plt, time, X'[:,9])
 
 #' This linear programming problem can be described in julia with JuMP
 function full_model_regression()
-    @time begin # measure time to create a model
+    time_build = @elapsed begin # measure time to create a model
 
         # initialize a optimization model
         full_model = Model(with_optimizer(OPTIMIZER))
@@ -198,11 +198,12 @@ function full_model_regression()
     end
 
     # solve the problem
-    @time optimize!(full_model)
+    time_solve = @elapsed optimize!(full_model)
 
-    # query results of the optimized problem
-    @show value.(β)[1:min(10, N_Candidates)]
-    @show objective_value(full_model)
+    println("First coefficients in solution: $(value.(β)[1:min(10, N_Candidates)])")
+    println("Objective value: $(objective_value(full_model))")
+    println("Time in solve: $time_solve")
+    println("Time in build: $time_build")
 
     return nothing
 end
@@ -547,7 +548,7 @@ end
 
 function decomposed_model(PARAM)
     reset_timer!() # reset timer fo comparision
-    @timeit "Init" begin
+    time_init = @elapsed @timeit "Init" begin
         println("Initialize decomposed model")
 
         # Create the mastter problem with no cuts
@@ -573,7 +574,7 @@ function decomposed_model(PARAM)
     LB = -Inf
 
     println("Initialize Iterative step")
-    @time @timeit "Loop"  for k in 1:80
+    time_loop = @elapsed @timeit "Loop"  for k in 1:80
 
         # Add cuts generated from each slave problem to the master problem
         @timeit "add cuts" for i ∈ Candidates
@@ -597,15 +598,17 @@ function decomposed_model(PARAM)
             best_sol = deepcopy(solution)
         end
         UB = min(UB, new_UB)
-        @show k, LB, UB
+        println("Iter = $k, LB = $LB, UB = $UB")
 
         if abs(UB - LB)/(abs(UB)+abs(LB)) < 0.05
             println("Converged!")
             break
         end
     end
-    @show solution[1][1:min(10, N_Candidates)]
-    @show solution[2]
+    println("First coefficients in solution: $(solution[1][1:min(10, N_Candidates)])")
+    println("Objective value: $(solution[2])")
+    println("Time in loop: $time_loop")
+    println("Time in init: $time_init")
 
     print_timer()
 

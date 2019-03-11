@@ -841,7 +841,7 @@ First coefs: &#91;3.76206, 0.790906, 0.883406, 0.0521332, 0.0870966, 0.315345,
 
 <pre class='hljl'>
 <span class='hljl-k'>function</span><span class='hljl-t'> </span><span class='hljl-nf'>full_model_regression</span><span class='hljl-p'>()</span><span class='hljl-t'>
-    </span><span class='hljl-nd'>@time</span><span class='hljl-t'> </span><span class='hljl-k'>begin</span><span class='hljl-t'> </span><span class='hljl-cs'># measure time to create a model</span><span class='hljl-t'>
+    </span><span class='hljl-n'>time_build</span><span class='hljl-t'> </span><span class='hljl-oB'>=</span><span class='hljl-t'> </span><span class='hljl-nd'>@elapsed</span><span class='hljl-t'> </span><span class='hljl-k'>begin</span><span class='hljl-t'> </span><span class='hljl-cs'># measure time to create a model</span><span class='hljl-t'>
 
         </span><span class='hljl-cs'># initialize a optimization model</span><span class='hljl-t'>
         </span><span class='hljl-n'>full_model</span><span class='hljl-t'> </span><span class='hljl-oB'>=</span><span class='hljl-t'> </span><span class='hljl-nf'>Model</span><span class='hljl-p'>(</span><span class='hljl-nf'>with_optimizer</span><span class='hljl-p'>(</span><span class='hljl-n'>OPTIMIZER</span><span class='hljl-p'>))</span><span class='hljl-t'>
@@ -867,11 +867,12 @@ First coefs: &#91;3.76206, 0.790906, 0.883406, 0.0521332, 0.0870966, 0.315345,
     </span><span class='hljl-k'>end</span><span class='hljl-t'>
 
     </span><span class='hljl-cs'># solve the problem</span><span class='hljl-t'>
-    </span><span class='hljl-nd'>@time</span><span class='hljl-t'> </span><span class='hljl-nf'>optimize!</span><span class='hljl-p'>(</span><span class='hljl-n'>full_model</span><span class='hljl-p'>)</span><span class='hljl-t'>
+    </span><span class='hljl-n'>time_solve</span><span class='hljl-t'> </span><span class='hljl-oB'>=</span><span class='hljl-t'> </span><span class='hljl-nd'>@elapsed</span><span class='hljl-t'> </span><span class='hljl-nf'>optimize!</span><span class='hljl-p'>(</span><span class='hljl-n'>full_model</span><span class='hljl-p'>)</span><span class='hljl-t'>
 
-    </span><span class='hljl-cs'># query results of the optimized problem</span><span class='hljl-t'>
-    </span><span class='hljl-nd'>@show</span><span class='hljl-t'> </span><span class='hljl-n'>value</span><span class='hljl-oB'>.</span><span class='hljl-p'>(</span><span class='hljl-n'>β</span><span class='hljl-p'>)[</span><span class='hljl-ni'>1</span><span class='hljl-oB'>:</span><span class='hljl-nf'>min</span><span class='hljl-p'>(</span><span class='hljl-ni'>10</span><span class='hljl-p'>,</span><span class='hljl-t'> </span><span class='hljl-n'>N_Candidates</span><span class='hljl-p'>)]</span><span class='hljl-t'>
-    </span><span class='hljl-nd'>@show</span><span class='hljl-t'> </span><span class='hljl-nf'>objective_value</span><span class='hljl-p'>(</span><span class='hljl-n'>full_model</span><span class='hljl-p'>)</span><span class='hljl-t'>
+    </span><span class='hljl-nf'>println</span><span class='hljl-p'>(</span><span class='hljl-s'>&quot;First coefficients in solution: </span><span class='hljl-si'>$</span><span class='hljl-p'>(</span><span class='hljl-n'>value</span><span class='hljl-oB'>.</span><span class='hljl-p'>(</span><span class='hljl-n'>β</span><span class='hljl-p'>)[</span><span class='hljl-ni'>1</span><span class='hljl-oB'>:</span><span class='hljl-nf'>min</span><span class='hljl-p'>(</span><span class='hljl-ni'>10</span><span class='hljl-p'>,</span><span class='hljl-t'> </span><span class='hljl-n'>N_Candidates</span><span class='hljl-p'>)])</span><span class='hljl-s'>&quot;</span><span class='hljl-p'>)</span><span class='hljl-t'>
+    </span><span class='hljl-nf'>println</span><span class='hljl-p'>(</span><span class='hljl-s'>&quot;Objective value: </span><span class='hljl-si'>$</span><span class='hljl-p'>(</span><span class='hljl-nf'>objective_value</span><span class='hljl-p'>(</span><span class='hljl-n'>full_model</span><span class='hljl-p'>))</span><span class='hljl-s'>&quot;</span><span class='hljl-p'>)</span><span class='hljl-t'>
+    </span><span class='hljl-nf'>println</span><span class='hljl-p'>(</span><span class='hljl-s'>&quot;Time in solve: </span><span class='hljl-si'>$time_solve</span><span class='hljl-s'>&quot;</span><span class='hljl-p'>)</span><span class='hljl-t'>
+    </span><span class='hljl-nf'>println</span><span class='hljl-p'>(</span><span class='hljl-s'>&quot;Time in build: </span><span class='hljl-si'>$time_build</span><span class='hljl-s'>&quot;</span><span class='hljl-p'>)</span><span class='hljl-t'>
 
     </span><span class='hljl-k'>return</span><span class='hljl-t'> </span><span class='hljl-n'>nothing</span><span class='hljl-t'>
 </span><span class='hljl-k'>end</span>
@@ -892,11 +893,11 @@ full_model_regression &#40;generic function with 1 method&#41;
 
 
 <pre class="output">
-0.019586 seconds &#40;60.34 k allocations: 13.307 MiB&#41;
-  0.722104 seconds &#40;129.57 k allocations: 13.432 MiB, 1.46&#37; gc time&#41;
-value.&#40;β&#41;&#91;1:min&#40;10, N_Candidates&#41;&#93; &#61; &#91;3.76377, 0.790012, 0.878022, 0.056315
-5, 0.0876301, 0.314878, 0.00317523, 0.148887, 0.120253, 0.242875&#93;
-objective_value&#40;full_model&#41; &#61; 42.62768238530737
+First coefficients in solution: &#91;3.76377, 0.790012, 0.878022, 0.0563155, 0.
+0876301, 0.314878, 0.00317523, 0.148887, 0.120253, 0.242875&#93;
+Objective value: 42.62768238530737
+Time in solve: 0.762704413
+Time in build: 0.051016511
 </pre>
 
 
@@ -1232,7 +1233,7 @@ master_add_cut &#40;generic function with 1 method&#41;
 <pre class='hljl'>
 <span class='hljl-k'>function</span><span class='hljl-t'> </span><span class='hljl-nf'>decomposed_model</span><span class='hljl-p'>(</span><span class='hljl-n'>PARAM</span><span class='hljl-p'>)</span><span class='hljl-t'>
     </span><span class='hljl-nf'>reset_timer!</span><span class='hljl-p'>()</span><span class='hljl-t'> </span><span class='hljl-cs'># reset timer fo comparision</span><span class='hljl-t'>
-    </span><span class='hljl-nd'>@timeit</span><span class='hljl-t'> </span><span class='hljl-s'>&quot;Init&quot;</span><span class='hljl-t'> </span><span class='hljl-k'>begin</span><span class='hljl-t'>
+    </span><span class='hljl-n'>time_init</span><span class='hljl-t'> </span><span class='hljl-oB'>=</span><span class='hljl-t'> </span><span class='hljl-nd'>@elapsed</span><span class='hljl-t'> </span><span class='hljl-nd'>@timeit</span><span class='hljl-t'> </span><span class='hljl-s'>&quot;Init&quot;</span><span class='hljl-t'> </span><span class='hljl-k'>begin</span><span class='hljl-t'>
         </span><span class='hljl-nf'>println</span><span class='hljl-p'>(</span><span class='hljl-s'>&quot;Initialize decomposed model&quot;</span><span class='hljl-p'>)</span><span class='hljl-t'>
 
         </span><span class='hljl-cs'># Create the mastter problem with no cuts</span><span class='hljl-t'>
@@ -1258,7 +1259,7 @@ master_add_cut &#40;generic function with 1 method&#41;
     </span><span class='hljl-n'>LB</span><span class='hljl-t'> </span><span class='hljl-oB'>=</span><span class='hljl-t'> </span><span class='hljl-oB'>-</span><span class='hljl-n'>Inf</span><span class='hljl-t'>
 
     </span><span class='hljl-nf'>println</span><span class='hljl-p'>(</span><span class='hljl-s'>&quot;Initialize Iterative step&quot;</span><span class='hljl-p'>)</span><span class='hljl-t'>
-    </span><span class='hljl-nd'>@time</span><span class='hljl-t'> </span><span class='hljl-nd'>@timeit</span><span class='hljl-t'> </span><span class='hljl-s'>&quot;Loop&quot;</span><span class='hljl-t'>  </span><span class='hljl-k'>for</span><span class='hljl-t'> </span><span class='hljl-n'>k</span><span class='hljl-t'> </span><span class='hljl-kp'>in</span><span class='hljl-t'> </span><span class='hljl-ni'>1</span><span class='hljl-oB'>:</span><span class='hljl-ni'>80</span><span class='hljl-t'>
+    </span><span class='hljl-n'>time_loop</span><span class='hljl-t'> </span><span class='hljl-oB'>=</span><span class='hljl-t'> </span><span class='hljl-nd'>@elapsed</span><span class='hljl-t'> </span><span class='hljl-nd'>@timeit</span><span class='hljl-t'> </span><span class='hljl-s'>&quot;Loop&quot;</span><span class='hljl-t'>  </span><span class='hljl-k'>for</span><span class='hljl-t'> </span><span class='hljl-n'>k</span><span class='hljl-t'> </span><span class='hljl-kp'>in</span><span class='hljl-t'> </span><span class='hljl-ni'>1</span><span class='hljl-oB'>:</span><span class='hljl-ni'>80</span><span class='hljl-t'>
 
         </span><span class='hljl-cs'># Add cuts generated from each slave problem to the master problem</span><span class='hljl-t'>
         </span><span class='hljl-nd'>@timeit</span><span class='hljl-t'> </span><span class='hljl-s'>&quot;add cuts&quot;</span><span class='hljl-t'> </span><span class='hljl-k'>for</span><span class='hljl-t'> </span><span class='hljl-n'>i</span><span class='hljl-t'> </span><span class='hljl-oB'>∈</span><span class='hljl-t'> </span><span class='hljl-n'>Candidates</span><span class='hljl-t'>
@@ -1282,15 +1283,17 @@ master_add_cut &#40;generic function with 1 method&#41;
             </span><span class='hljl-n'>best_sol</span><span class='hljl-t'> </span><span class='hljl-oB'>=</span><span class='hljl-t'> </span><span class='hljl-nf'>deepcopy</span><span class='hljl-p'>(</span><span class='hljl-n'>solution</span><span class='hljl-p'>)</span><span class='hljl-t'>
         </span><span class='hljl-k'>end</span><span class='hljl-t'>
         </span><span class='hljl-n'>UB</span><span class='hljl-t'> </span><span class='hljl-oB'>=</span><span class='hljl-t'> </span><span class='hljl-nf'>min</span><span class='hljl-p'>(</span><span class='hljl-n'>UB</span><span class='hljl-p'>,</span><span class='hljl-t'> </span><span class='hljl-n'>new_UB</span><span class='hljl-p'>)</span><span class='hljl-t'>
-        </span><span class='hljl-nd'>@show</span><span class='hljl-t'> </span><span class='hljl-n'>k</span><span class='hljl-p'>,</span><span class='hljl-t'> </span><span class='hljl-n'>LB</span><span class='hljl-p'>,</span><span class='hljl-t'> </span><span class='hljl-n'>UB</span><span class='hljl-t'>
+        </span><span class='hljl-nf'>println</span><span class='hljl-p'>(</span><span class='hljl-s'>&quot;Iter = </span><span class='hljl-si'>$k</span><span class='hljl-s'>, LB = </span><span class='hljl-si'>$LB</span><span class='hljl-s'>, UB = </span><span class='hljl-si'>$UB</span><span class='hljl-s'>&quot;</span><span class='hljl-p'>)</span><span class='hljl-t'>
 
         </span><span class='hljl-k'>if</span><span class='hljl-t'> </span><span class='hljl-nf'>abs</span><span class='hljl-p'>(</span><span class='hljl-n'>UB</span><span class='hljl-t'> </span><span class='hljl-oB'>-</span><span class='hljl-t'> </span><span class='hljl-n'>LB</span><span class='hljl-p'>)</span><span class='hljl-oB'>/</span><span class='hljl-p'>(</span><span class='hljl-nf'>abs</span><span class='hljl-p'>(</span><span class='hljl-n'>UB</span><span class='hljl-p'>)</span><span class='hljl-oB'>+</span><span class='hljl-nf'>abs</span><span class='hljl-p'>(</span><span class='hljl-n'>LB</span><span class='hljl-p'>))</span><span class='hljl-t'> </span><span class='hljl-oB'>&lt;</span><span class='hljl-t'> </span><span class='hljl-nfB'>0.05</span><span class='hljl-t'>
             </span><span class='hljl-nf'>println</span><span class='hljl-p'>(</span><span class='hljl-s'>&quot;Converged!&quot;</span><span class='hljl-p'>)</span><span class='hljl-t'>
             </span><span class='hljl-k'>break</span><span class='hljl-t'>
         </span><span class='hljl-k'>end</span><span class='hljl-t'>
     </span><span class='hljl-k'>end</span><span class='hljl-t'>
-    </span><span class='hljl-nd'>@show</span><span class='hljl-t'> </span><span class='hljl-n'>solution</span><span class='hljl-p'>[</span><span class='hljl-ni'>1</span><span class='hljl-p'>][</span><span class='hljl-ni'>1</span><span class='hljl-oB'>:</span><span class='hljl-nf'>min</span><span class='hljl-p'>(</span><span class='hljl-ni'>10</span><span class='hljl-p'>,</span><span class='hljl-t'> </span><span class='hljl-n'>N_Candidates</span><span class='hljl-p'>)]</span><span class='hljl-t'>
-    </span><span class='hljl-nd'>@show</span><span class='hljl-t'> </span><span class='hljl-n'>solution</span><span class='hljl-p'>[</span><span class='hljl-ni'>2</span><span class='hljl-p'>]</span><span class='hljl-t'>
+    </span><span class='hljl-nf'>println</span><span class='hljl-p'>(</span><span class='hljl-s'>&quot;First coefficients in solution: </span><span class='hljl-si'>$</span><span class='hljl-p'>(</span><span class='hljl-n'>solution</span><span class='hljl-p'>[</span><span class='hljl-ni'>1</span><span class='hljl-p'>][</span><span class='hljl-ni'>1</span><span class='hljl-oB'>:</span><span class='hljl-nf'>min</span><span class='hljl-p'>(</span><span class='hljl-ni'>10</span><span class='hljl-p'>,</span><span class='hljl-t'> </span><span class='hljl-n'>N_Candidates</span><span class='hljl-p'>)])</span><span class='hljl-s'>&quot;</span><span class='hljl-p'>)</span><span class='hljl-t'>
+    </span><span class='hljl-nf'>println</span><span class='hljl-p'>(</span><span class='hljl-s'>&quot;Objective value: </span><span class='hljl-si'>$</span><span class='hljl-p'>(</span><span class='hljl-n'>solution</span><span class='hljl-p'>[</span><span class='hljl-ni'>2</span><span class='hljl-p'>])</span><span class='hljl-s'>&quot;</span><span class='hljl-p'>)</span><span class='hljl-t'>
+    </span><span class='hljl-nf'>println</span><span class='hljl-p'>(</span><span class='hljl-s'>&quot;Time in loop: </span><span class='hljl-si'>$time_loop</span><span class='hljl-s'>&quot;</span><span class='hljl-p'>)</span><span class='hljl-t'>
+    </span><span class='hljl-nf'>println</span><span class='hljl-p'>(</span><span class='hljl-s'>&quot;Time in init: </span><span class='hljl-si'>$time_init</span><span class='hljl-s'>&quot;</span><span class='hljl-p'>)</span><span class='hljl-t'>
 
     </span><span class='hljl-nf'>print_timer</span><span class='hljl-p'>()</span><span class='hljl-t'>
 
@@ -1320,40 +1323,41 @@ Build initial solution
 Build slave problems
 Build initial cuts
 Initialize Iterative step
-&#40;k, LB, UB&#41; &#61; &#40;1, 0.0, 736.9397549915154&#41;
-&#40;k, LB, UB&#41; &#61; &#40;2, 0.0, 736.9397549915154&#41;
-&#40;k, LB, UB&#41; &#61; &#40;3, 16.349215016228914, 91.35425023118906&#41;
-&#40;k, LB, UB&#41; &#61; &#40;4, 28.27109871462413, 55.078259122158684&#41;
-&#40;k, LB, UB&#41; &#61; &#40;5, 36.35333651603361, 50.10700424349081&#41;
-&#40;k, LB, UB&#41; &#61; &#40;6, 40.587767838387414, 45.263955986446454&#41;
-&#40;k, LB, UB&#41; &#61; &#40;7, 42.040356808876794, 44.03470247234688&#41;
+Iter &#61; 1, LB &#61; 0.0, UB &#61; 736.9397549915154
+Iter &#61; 2, LB &#61; 0.0, UB &#61; 736.9397549915154
+Iter &#61; 3, LB &#61; 16.349215016228914, UB &#61; 91.35425023118906
+Iter &#61; 4, LB &#61; 28.27109871462413, UB &#61; 55.078259122158684
+Iter &#61; 5, LB &#61; 36.35333651603361, UB &#61; 50.10700424349081
+Iter &#61; 6, LB &#61; 40.587767838387414, UB &#61; 45.263955986446454
+Iter &#61; 7, LB &#61; 42.040356808876794, UB &#61; 44.03470247234688
 Converged&#33;
-  1.213494 seconds &#40;2.51 M allocations: 114.380 MiB, 4.90&#37; gc time&#41;
-&#40;solution&#91;1&#93;&#41;&#91;1:min&#40;10, N_Candidates&#41;&#93; &#61; &#91;3.76267, 0.792786, 0.873536, 0.05
-58342, 0.0914146, 0.312128, -0.00148945, 0.155308, 0.121462, 0.236182&#93;
-solution&#91;2&#93; &#61; 42.040356808876794
+First coefficients in solution: &#91;3.76267, 0.792786, 0.873536, 0.0558342, 0.
+0914146, 0.312128, -0.00148945, 0.155308, 0.121462, 0.236182&#93;
+Objective value: 42.040356808876794
+Time in loop: 1.212996736
+Time in init: 0.839133386
  ─────────────────────────────────────────────────────────────────────────
                                   Time                   Allocations      
                           ──────────────────────   ───────────────────────
-     Tot / &#37; measured:         1.91s / 100&#37;             261MiB / 100&#37;     
+     Tot / &#37; measured:         2.06s / 100&#37;             261MiB / 100&#37;     
 
  Section          ncalls     time   &#37;tot     avg     alloc   &#37;tot      avg
  ─────────────────────────────────────────────────────────────────────────
- Loop                  1    1.21s  63.6&#37;   1.21s    114MiB  43.8&#37;   114MiB
-   solve nodes         7    824ms  43.2&#37;   118ms   96.6MiB  37.0&#37;  13.8MiB
-     opt             700    497ms  26.1&#37;   710μs   2.49MiB  0.95&#37;  3.64KiB
-     fix             700    197ms  10.3&#37;   281μs   73.8MiB  28.3&#37;   108KiB
-     dual            700    121ms  6.33&#37;   173μs   20.0MiB  7.66&#37;  29.3KiB
-   solve master        7    279ms  14.6&#37;  39.8ms   1.55MiB  0.60&#37;   227KiB
-   add cuts            7   80.1ms  4.20&#37;  11.4ms   14.7MiB  5.63&#37;  2.10MiB
- Init                  1    694ms  36.4&#37;   694ms    147MiB  56.2&#37;   147MiB
-   Cuts                1    540ms  28.3&#37;   540ms    101MiB  38.9&#37;   101MiB
-     opt             100    432ms  22.7&#37;  4.32ms   93.3MiB  35.7&#37;   955KiB
-     dual            100   17.2ms  0.90&#37;   172μs   2.86MiB  1.09&#37;  29.3KiB
-     fix             100   1.85ms  0.10&#37;  18.5μs    633KiB  0.24&#37;  6.33KiB
-   Slaves              1    152ms  7.99&#37;   152ms   44.9MiB  17.2&#37;  44.9MiB
-   Master              1    966μs  0.05&#37;   966μs    148KiB  0.06&#37;   148KiB
-   Sol                 1    856ns  0.00&#37;   856ns      928B  0.00&#37;     928B
+ Loop                  1    1.21s  59.1&#37;   1.21s    114MiB  43.8&#37;   114MiB
+   solve nodes         7    821ms  40.0&#37;   117ms   96.6MiB  37.0&#37;  13.8MiB
+     opt             700    485ms  23.7&#37;   693μs   2.49MiB  0.95&#37;  3.64KiB
+     fix             700    208ms  10.1&#37;   297μs   73.8MiB  28.3&#37;   108KiB
+     dual            700    119ms  5.78&#37;   170μs   20.0MiB  7.66&#37;  29.3KiB
+   solve master        7    293ms  14.3&#37;  41.8ms   1.55MiB  0.60&#37;   227KiB
+   add cuts            7   71.8ms  3.50&#37;  10.3ms   14.7MiB  5.63&#37;  2.10MiB
+ Init                  1    839ms  40.9&#37;   839ms    147MiB  56.2&#37;   147MiB
+   Cuts                1    632ms  30.8&#37;   632ms    101MiB  38.9&#37;   101MiB
+     opt             100    520ms  25.3&#37;  5.20ms   93.3MiB  35.7&#37;   955KiB
+     dual            100   16.9ms  0.82&#37;   169μs   2.86MiB  1.09&#37;  29.3KiB
+     fix             100   1.59ms  0.08&#37;  15.9μs    633KiB  0.24&#37;  6.33KiB
+   Slaves              1    206ms  10.0&#37;   206ms   44.9MiB  17.2&#37;  44.9MiB
+   Master              1    671μs  0.03&#37;   671μs    148KiB  0.06&#37;   148KiB
+   Sol                 1    855ns  0.00&#37;   855ns      928B  0.00&#37;     928B
  ─────────────────────────────────────────────────────────────────────────
 </pre>
 
@@ -1374,40 +1378,41 @@ Build initial solution
 Build slave problems
 Build initial cuts
 Initialize Iterative step
-&#40;k, LB, UB&#41; &#61; &#40;1, 0.0, 736.9397549915277&#41;
-&#40;k, LB, UB&#41; &#61; &#40;2, 0.0, 736.9397549915277&#41;
-&#40;k, LB, UB&#41; &#61; &#40;3, 16.34921501622883, 91.35425023118819&#41;
-&#40;k, LB, UB&#41; &#61; &#40;4, 28.27109871462381, 55.07825912215944&#41;
-&#40;k, LB, UB&#41; &#61; &#40;5, 36.35333651603393, 50.107004243491126&#41;
-&#40;k, LB, UB&#41; &#61; &#40;6, 40.58776783838731, 45.26395598644727&#41;
-&#40;k, LB, UB&#41; &#61; &#40;7, 42.040356808876844, 44.03470247234622&#41;
+Iter &#61; 1, LB &#61; 0.0, UB &#61; 736.9397549915191
+Iter &#61; 2, LB &#61; 0.0, UB &#61; 736.9397549915191
+Iter &#61; 3, LB &#61; 16.34921501622873, UB &#61; 91.35425023118692
+Iter &#61; 4, LB &#61; 28.271098714624266, UB &#61; 55.078259122159
+Iter &#61; 5, LB &#61; 36.353336516033494, UB &#61; 50.107004243491104
+Iter &#61; 6, LB &#61; 40.5877678383875, UB &#61; 45.263955986447975
+Iter &#61; 7, LB &#61; 42.04035680887677, UB &#61; 44.03470247234711
 Converged&#33;
-  0.700944 seconds &#40;416.19 k allocations: 26.329 MiB, 2.52&#37; gc time&#41;
-&#40;solution&#91;1&#93;&#41;&#91;1:min&#40;10, N_Candidates&#41;&#93; &#61; &#91;3.76267, 0.792786, 0.873536, 0.05
-58342, 0.0914146, 0.312128, -0.00148945, 0.155308, 0.121462, 0.236182&#93;
-solution&#91;2&#93; &#61; 42.040356808876844
+First coefficients in solution: &#91;3.76267, 0.792786, 0.873536, 0.0558342, 0.
+0914146, 0.312128, -0.00148945, 0.155308, 0.121462, 0.236182&#93;
+Objective value: 42.04035680887677
+Time in loop: 0.688577073
+Time in init: 0.355588428
  ─────────────────────────────────────────────────────────────────────────
                                   Time                   Allocations      
                           ──────────────────────   ───────────────────────
-     Tot / &#37; measured:         1.03s / 100&#37;            64.6MiB / 100&#37;     
+     Tot / &#37; measured:         1.04s / 100&#37;            64.6MiB / 100&#37;     
 
  Section          ncalls     time   &#37;tot     avg     alloc   &#37;tot      avg
  ─────────────────────────────────────────────────────────────────────────
- Loop                  1    701ms  68.1&#37;   701ms   26.3MiB  40.8&#37;  26.3MiB
-   solve nodes         7    358ms  34.8&#37;  51.2ms   10.4MiB  16.1&#37;  1.49MiB
-     opt             700    338ms  32.8&#37;   482μs   8.34MiB  12.9&#37;  12.2KiB
-     dual            700   10.7ms  1.04&#37;  15.3μs   1.09MiB  1.69&#37;  1.59KiB
-     fix             700   3.45ms  0.33&#37;  4.92μs    613KiB  0.93&#37;     896B
-   solve master        7    284ms  27.6&#37;  40.6ms   1.55MiB  2.40&#37;   227KiB
-   add cuts            7   56.7ms  5.51&#37;  8.10ms   14.3MiB  22.2&#37;  2.05MiB
- Init                  1    329ms  31.9&#37;   329ms   38.3MiB  59.2&#37;  38.3MiB
-   Cuts                1    243ms  23.6&#37;   243ms   17.4MiB  26.9&#37;  17.4MiB
-     opt             100    140ms  13.6&#37;  1.40ms   11.4MiB  17.7&#37;   117KiB
-     dual            100   2.58ms  0.25&#37;  25.8μs    159KiB  0.24&#37;  1.59KiB
-     fix             100    448μs  0.04&#37;  4.48μs   87.5KiB  0.13&#37;     896B
-   Slaves              1   84.2ms  8.18&#37;  84.2ms   20.7MiB  32.1&#37;  20.7MiB
-   Master              1   1.11ms  0.11&#37;  1.11ms    148KiB  0.22&#37;   148KiB
-   Sol                 1    856ns  0.00&#37;   856ns      928B  0.00&#37;     928B
+ Loop                  1    689ms  65.9&#37;   689ms   26.3MiB  40.7&#37;  26.3MiB
+   solve nodes         7    353ms  33.8&#37;  50.4ms   10.4MiB  16.1&#37;  1.49MiB
+     opt             700    332ms  31.8&#37;   475μs   8.34MiB  12.9&#37;  12.2KiB
+     dual            700   10.7ms  1.03&#37;  15.3μs   1.09MiB  1.69&#37;  1.59KiB
+     fix             700   3.53ms  0.34&#37;  5.05μs    613KiB  0.93&#37;     896B
+   solve master        7    278ms  26.6&#37;  39.7ms   1.55MiB  2.40&#37;   227KiB
+   add cuts            7   56.7ms  5.43&#37;  8.10ms   14.3MiB  22.2&#37;  2.05MiB
+ Init                  1    356ms  34.1&#37;   356ms   38.3MiB  59.3&#37;  38.3MiB
+   Cuts                1    268ms  25.7&#37;   268ms   17.4MiB  26.9&#37;  17.4MiB
+     opt             100    156ms  15.0&#37;  1.56ms   11.4MiB  17.7&#37;   117KiB
+     dual            100   2.66ms  0.25&#37;  26.6μs    159KiB  0.24&#37;  1.59KiB
+     fix             100    465μs  0.04&#37;  4.65μs   87.5KiB  0.13&#37;     896B
+   Slaves              1   85.7ms  8.21&#37;  85.7ms   20.7MiB  32.1&#37;  20.7MiB
+   Master              1   1.16ms  0.11&#37;  1.16ms    148KiB  0.22&#37;   148KiB
+   Sol                 1    428ns  0.00&#37;   428ns      928B  0.00&#37;     928B
  ─────────────────────────────────────────────────────────────────────────
 </pre>
 
