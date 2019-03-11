@@ -6,6 +6,8 @@ examples=[
 cd(path)
 for ex in examples
     weave(ex)
-    weave(ex, doctype = "github")
-    # weave("benders_quatile_regression.jl", doctype = "md2pdf")
+    # weave(ex, doctype = "github")
+    # weave(ex, doctype = "notebook")
+    # Weave.convert_doc(ex, ex[1:end-3]*".ipynb")
+    # weave(ex, doctype = "md2pdf")
 end
