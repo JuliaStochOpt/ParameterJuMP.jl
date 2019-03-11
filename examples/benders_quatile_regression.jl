@@ -36,7 +36,8 @@ using ParameterJuMP
 #' JuMP: the julia mathematical programming modeling tool
 using JuMP
 
-#' GLPK: A linear programing solver (other solvers could be used - such as Clp, Xpress, Gurobi, CPLEX and so on)
+#' GLPK: A linear programing solver (other solvers could be used - 
+#' such as Clp, Xpress, Gurobi, CPLEX and so on)
 
 #+ echo = false
 # using GLPK
@@ -59,7 +60,8 @@ gr(); # plotting backend
 
 #' # Norm-1 regression
 
-#' We will apply Norm-1 regression to the [Linear Regression](https://en.wikipedia.org/wiki/Linear_regression) problem.
+#' We will apply Norm-1 regression to the
+#' [Linear Regression](https://en.wikipedia.org/wiki/Linear_regression) problem.
 #' Linear regression is a statistical tool to obtain the relation
 #' between one **dependent variable** and other **explanatory variables**.
 #' In other words, given a set of $n$ explanatory variables $X = \{ X_1, \dots, X_n \}$
@@ -74,15 +76,28 @@ gr(); # plotting backend
 #' The estimation of the $\beta$ values relies on observations of the variables:
 #' $\{y^i, x_1^i, \dots, x_n^i\}_i$
 #'
-#' In this notebook we will solver a problem where the explanatory variables are sinusoids of differents frequencies
+#' In this notebook we will solver a problem where the explanatory variables
+#' are sinusoids of differents frequencies
 
 #' First, we define the numebr of explanatory variables and observations
 
 #+ echo = false
+
+# GLPK small
+# const N_Candidates = 100
+# const N_Observations = 600
+# const N_Nodes = 100
+
+# GLPK large
+# const Candidates = 600
+# const Observations = 5000
+# const Nodes = 1000
+
 # Xpress
 # const N_Candidates = 700
 # const N_Observations = 5000
 # const N_Nodes = 1000
+
 #+
 
 const N_Candidates = 100
@@ -208,8 +223,13 @@ N_Observations*N_Candidates < 10_000_000 && full_model_regression()
 #' Of course some variables will belong to both problems, this is where the
 #' cleverness of Benders kicks in:
 #' The master problem is solved and passes the shared variables to the slave.
-#' The slave problem is solved with the shared variables FIXED to the values given by the master problem. The solution of the slave problem can be used to generate a constraint to the master problem to describe the linear approximation of the cost function of the shared variables.
-#' In many cases, like stochastic programming, the slave problems have a interestig structure and might be broken in smaller problem to be solved in parallel.
+#' The slave problem is solved with the shared variables FIXED to the values
+#' given by the master problem. The solution of the slave problem can be used
+#' to generate a constraint to the master problem to describe the linear
+#' approximation of the cost function of the shared variables.
+#' In many cases, like stochastic programming, the slave problems have a
+#' interestig structure and might be broken in smaller problem to be solved
+#' in parallel.
 
 #' We will descibe the decomposition similarly to what is done in:
 #' Introduction to Linear Optimization, Bertsimas & Tsitsiklis (Chapter 6.5):
@@ -241,7 +261,10 @@ N_Observations*N_Candidates < 10_000_000 && full_model_regression()
 #' $$
 #'
 #'
-#' The $z_k(x)$ function represents the cost of the subproblem given a solution for $x$. This function is a convex function because $x$ affects only the right hand side of the problem (this is a standard resutls in LP theory).
+#' The $z_k(x)$ function represents the cost of the subproblem given a
+#' solution for $x$. This function is a convex function because $x$
+#' affects only the right hand side of the problem (this is a standard
+#' resutls in LP theory).
 #'
 #' For the special case of the Norm-1 reggression the problem is written as:
 #'
@@ -266,7 +289,10 @@ end
 #'
 #' Which can be written in JuMP as follows.
 #'
-#' At this point we make a small detour to highlight the ParameterJuMP application. Every time you a find a IF block with the flag `PARAM` it means that we have two different implmentatins of the method: one relying on ParameterJuMP and the other using pure JuMP.
+#' At this point we make a small detour to highlight the ParameterJuMP
+#' application. Every time you a find a IF block with the flag `PARAM`
+#' it means that we have two different implmentatins of the method:
+#' one relying on ParameterJuMP and the other using pure JuMP.
 #'
 #'
 
@@ -332,7 +358,8 @@ end
 
 #' ### Master
 
-#' Now that all pieces of the original problem can be representad by the convex $z_k(x)$ functions we can recast the problem inthe the equivalent form:
+#' Now that all pieces of the original problem can be representad by
+#' the convex $z_k(x)$ functions we can recast the problem inthe the equivalent form:
 #'
 #' $$
 #'\begin{align}
@@ -342,9 +369,11 @@ end
 #'\end{align}
 #' $$
 #'
-#' However we cannot pass a problem in this for to a linear programming solver (it could be passed to other kinds of solvers).
+#' However we cannot pass a problem in this for to a linear programming
+#' solver (it could be passed to other kinds of solvers).
 #'
-#' Another standart result of optimization theory is that a convex function an be represented by its supporting hyper-planes:
+#' Another standart result of optimization theory is that a convex function
+#' an be represented by its supporting hyper-planes:
 #'
 #' $$
 #'\begin{align}
@@ -509,7 +538,8 @@ end
 #' - repeat
 #'
 
-#' Now we grab all the pieces tha we built and we writeh the benders algorithm by calling the above function in a proper order.
+#' Now we grab all the pieces tha we built and we writeh the benders
+#' algorithm by calling the above function in a proper order.
 #'
 #' The macros `@timeit` are use to time each step of the algorithm.
 

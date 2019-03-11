@@ -16,13 +16,101 @@ A JuMP extension to use parameters in constraints constants.
 [gitter-img]: https://badges.gitter.im/JuliaOpt/StochasticDualDynamicProgramming.jl.svg
 [discourse-url]: https://discourse.julialang.org/c/domain/opt
 
+## Welcome to ParameterJuMP
+
+ParameterJuMP adds new methods created on top of JuMP to use constant
+parameters in optimization problems.
+
+To enable the usage of ParameterJuMP the optimization model must
+be constructed with the function:
+
+`ModelWithParam(args...)`
+
+Which can receive the same inputs as the original `Model` constructor,
+and also returns the same `Model` type.
+
+The key constructor of ParameterJuMP is:
+
+`Parameter(model::JuMP.Model, value::Number)`
+
+Which adds a parameter fixed at `value` to the JuMP model: `model`.
+It is possible to create mutiple parameters at the same time with:
+
+`Parameters(model::JuMP.Model, values::Vector{Number})`
+
+Which returns a vector of parameters.
+
+It is possible to change the current value of a parameter with the
+function:
+
+`ParameterJuMP.setvalue(p::Parameter, new_value::Number)`
+
+Finally, the `dual` function of JuMP is overloaded to return duals
+for parameters:
+
+`dual(p::Parameter)`
+
+Last but not least!
+The parameter algebra was implemented so that is possible to:
+
+- sum two parameters
+- multiply parameters by constants
+- sum parameters and variables
+- sum parameters and affine expressions
+
+All the operations related to linear constraints are implmented.
+
+### Simple example
+
+Lets use JuMP plus ParameterJuMP the optimization problem:
+
+```
+min   x
+s.t.  x >= a
+```
+
+where `x` is a variable and `a` is a constant.
+We can also solve it for diffenrent values of `a`.
+
+```julia
+# Create a JuMP model able to handle parameters
+model = ModelWithParams(with_optimizer(SOME_SOLVER.Optimizer))
+
+# Create a regular JuMP variable
+@variable(model, x)
+
+# Create a parameter fixed at 10
+Parameter(model, a, 10)
+
+# adds a constraint mixing variables and parameters to the model
+@constraint(model, x >= a)
+
+# solve the model
+optimize!(model)
+
+# query dual variable of the constant a
+dual(a)
+
+# modify the value of the parameter a to 20 
+ParameterJuMP.setvalue(a, 20)
+
+# solve the model with the new value of the parameter
+optimize!(model)
+```
+
+## Installation
+
+Currently ParameterJuMP works with Julia 1.x and JuMP 0.19.x
+
+- type `]` to go to the package manager
+- type `add https://github.com/JuliaStochOpt/ParameterJuMP.jl` (because its currently not registered)
+
 ## Motivation
 
 Suppose we have linear programming problem of the following form
-<img src="http://latex.codecogs.com/gif.latex?x" border="0"/>
 
 <p align="center">
-<img src="https://latex.codecogs.com/gif.latex?\begin{array}{ll}&space;\mbox{minimize}&space;&&space;c^\top&space;x\\&space;\mbox{subject&space;to}&space;&&space;Ax&space;&space;=&space;b&space;-&minus;D&space;y&space;\\&space;&&space;s&space;\geq&space;0,&space;\end{array}" title=""/>
+<img src="https://latex.codecogs.com/gif.latex?\begin{array}{ll}&space;\mbox{minimize}&space;&&space;c^\top&space;x\\&space;\mbox{subject&space;to}&space;&&space;Ax&space;&space;=&space;b&space;-&space;D&space;y&space;\\&space;&&space;x&space;\geq&space;0,&space;\end{array}" title=""/>
 </p>
 
 The only decision variable in the problem is <img src="http://latex.codecogs.com/gif.latex?x" border="0"/>.
@@ -41,6 +129,8 @@ the chain rule on the duals of the constraints.
 In pure JuMP we can acomplish these tasks by creating dummy fixed variables.
 So that we can easily change their fixed values and query duals from fixing
 constraints.
+
+### Pure JuMP version
 
 One example in pure JuMP goes as follows:
 
@@ -84,52 +174,9 @@ variable that are added without real need to the solver representation
 of the optimization problem. Hence solve times are increased without
 real need!!!
 
-## Welcome to ParameterJuMP
+### ParameterJuMP version
 
-ParameterJuMP adds new methods created on top of JuMP to create parameters
-in optimization problems.
-
-Firstly, to enable the usage of ParameterJuMP the optimization model must be constructed with the function:
-
-`ModelWithParam(args...)`
-
-Which can receive the same inputs as the original `Model` constructor,
-and also returns the same `Model` type.
-
-The other key constructor exported by ParameterJuMP is:
-
-`Parameter(model::JuMP.Model, value::Number)`
-
-Which adds a parameter fixed at `value` to the JuMP `model`.
-In order to create mutiple parameters at the same time, one can use:
-
-`Parameters(model::JuMP.Model, values::Vector{Number})`
-
-Which returns a vector of parameters.
-
-It is possible to change the current value of a parameter with the
-function:
-
-`ParameterJuMP.setvalue(p::Parameter, new_value::Number)`
-
-Finally, the `dual` function of JuMP is overloaded to return duals
-for parameters:
-
-`dual(p::Parameter)`
-
-Last but not least!
-The parameter algebra was implemented so that is possible to:
-
-- sum two parameters
-- multiply parameters by constants
-- sum parameters and variables
-- sum parameters and affine expressions
-
-All the operations related to linear constraints are implmented.
-
-## Example
-
-The same example of the motivation can be written with parameters:
+The same example of the motivation can be written with **parameters**:
 
 ```julia
 # create a regular JuMP Model
@@ -165,3 +212,4 @@ optimize!(model_pure)
 # query dual values (again)
 y_duals = dual.(y)
 ```
+
