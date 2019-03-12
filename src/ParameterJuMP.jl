@@ -5,6 +5,7 @@ const MOI = MathOptInterface
 const MOIU = MOI.Utilities
 
 using JuMP
+using SparseArrays
 
 export
 ModelWithParams, Parameter, Parameters, setvalue!
@@ -33,6 +34,7 @@ const GE = MathOptInterface.GreaterThan{Float64}
 mutable struct ParameterData
 
     ind_map::Dict{Int64, Int64}
+    ind_vec::SparseVector{Int64, Int64}
 
     inds::Vector{Int64}
     next_ind::Int64
@@ -62,6 +64,7 @@ mutable struct ParameterData
     function ParameterData()
         new(
             Dict{Int64, Int64}(),
+            sparsevec([1],[1]),
             Int64[],
             1,
             Float64[],
@@ -199,7 +202,7 @@ function Parameters(model::JuMP.Model, val::Vector{R}) where R
     return out
 end
 
-_local_index(params::ParameterData, p::Parameter) = params.ind_map[p.ind]
+_local_index(params::ParameterData, p::Parameter) = params.ind_vec[p.ind]
 _local_index(p::Parameter) = _local_index(_getparamdata(p)::ParameterData, p)
 
 # getters/setters
@@ -207,7 +210,7 @@ _local_index(p::Parameter) = _local_index(_getparamdata(p)::ParameterData, p)
 
 function JuMP.value(p::Parameter)
     params = _getparamdata(p)::ParameterData
-    params.future_values[_local_index(p)]
+    params.future_values[_local_index(params, p)]
 end
 
 """
@@ -218,7 +221,7 @@ Sets the parameter `p` to the new value `val`.
 function setvalue!(p::Parameter, val::Real)
     params = _getparamdata(p)::ParameterData
     params.sync = false
-    params.future_values[_local_index(p)] = val
+    params.future_values[_local_index(params, p)] = val
     return nothing
 end
 function JuMP.dual(p::Parameter)
@@ -226,7 +229,7 @@ function JuMP.dual(p::Parameter)
     if lazy_duals(params)
         return _getdual(p)
     else
-        return params.dual_values[_local_index(p)]
+        return params.dual_values[_local_index(params, p)]
     end
 end
 
@@ -303,7 +306,7 @@ function JuMP.add_constraint(m::JuMP.Model, c::PAEC{S}, name::String="") where S
     # needed for lazy get dual
     if lazy_duals(data)
         for (p, coef) in c.func.p.terms
-            push!(data.constraints_map[_local_index(p)], ParametrizedConstraintRef(cref, coef))
+            push!(data.constraints_map[_local_index(data, p)], ParametrizedConstraintRef(cref, coef))
         end
     end
 
@@ -324,6 +327,7 @@ Parameters.
 """
 function sync(data::ParameterData)
     if !is_sync(data)
+        data.ind_vec = sparsevec(data.ind_map)
         _update_constraints(data, EQ)
         _update_constraints(data, LE)
         _update_constraints(data, GE)
@@ -348,7 +352,8 @@ function _update_constraint(data, cref, gaep)
     old_set = MOI.get(cref.model.moi_backend, MOI.ConstraintSet(), ci)
     val = 0.0
     @inbounds for (p, coef) in gaep.terms
-        val += coef * (data.future_values[_local_index(p)] - data.current_values[_local_index(p)])
+        ind = _local_index(data, p)
+        val += coef * (data.future_values[ind] - data.current_values[ind])
     end
     new_set = _shift_constant(old_set, -val)
     MOI.set(cref.model.moi_backend, MOI.ConstraintSet(), ci, new_set)
@@ -384,7 +389,7 @@ end
 function _update_duals(data, cref, gaep)
     dual_sol = JuMP.dual(cref)
     @inbounds for (p, coef) in gaep.terms
-        data.dual_values[_local_index(p)] -= coef * dual_sol
+        data.dual_values[_local_index(data, p)] -= coef * dual_sol
     end
     return nothing
 end
