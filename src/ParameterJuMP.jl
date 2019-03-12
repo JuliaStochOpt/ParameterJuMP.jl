@@ -103,13 +103,19 @@ _get_param_dict(data::ParameterData, ::Type{LE}) = data.parameters_map_saf_in_le
 _get_param_dict(data::ParameterData, ::Type{GE}) = data.parameters_map_saf_in_ge
 
 _getmodel(p::Parameter) = p.model
-_getparamdata(p::Parameter) = _getparamdata(_getmodel(p))::ParameterData
+_getparamdata(p::Parameter)::ParameterData = _getparamdata(_getmodel(p))::ParameterData
 # _getparamdata(model::JuMP.Model) = model.ext[:params]::ParameterData
-function _getparamdata(model::JuMP.Model)
+function _getparamdata(model::JuMP.Model)::ParameterData
+    # TODO checks dict twice
     !haskey(model.ext, :params) && error("In order to use Parameters the model must be created with the ModelWithParams constructor")
     return model.ext[:params]
 end
 
+"""
+    is_sync(model::JuMP.Model)
+
+Test if the JuMP Model is updated to the latest value of all parameters.
+"""
 is_sync(data::ParameterData) = data.sync
 is_sync(model::JuMP.Model) = is_sync(_getparamdata(model))
 
@@ -318,7 +324,7 @@ end
 # ------------------------------------------------------------------------------
 
 """
-    sync(data::ParameterData)::Nothing
+    sync(model::JuMP.Model)::Nothing
 
 Forces the model to update its constraints to the new values of the
 Parameters.
@@ -332,6 +338,9 @@ function sync(data::ParameterData)
         data.sync = true
     end
     return nothing
+end
+function sync(model::JuMP.Model)
+    sync(_getparamdata(model))
 end
 
 function _update_constraints(data, ::Type{S}) where S
@@ -413,6 +422,66 @@ function ModelWithParams(args...; kwargs...)
     m.ext[:params] = ParameterData()
 
     return m
+end
+
+function JuMP.set_coefficient(con::CtrRef{F, S}, param::Parameter, coef::Number) where {F, S}
+    data = _getparamdata(param)
+    dict = _get_param_dict(data, S)
+    if haskey(dict, con)
+        gaep = dict[con]
+        JuMP._add_or_set!(gaep.terms, param, coef)
+    else
+        # TODO fix type C
+        dict[con] = GAEp{Float64}(zero(Float64), param => coef)
+    end
+    if !iszero(coef)
+        data.sync = false
+    end
+    # TODO lazy
+    nothing
+end
+
+"""
+    delete_from_constraint(con, param::Parameter)
+
+Removes parameter `param` from constraint `con`.
+"""
+function delete_from_constraint(con::CtrRef{F, S}, param::Parameter) where {F, S}
+    data = _getparamdata(param)
+    if haskey(dict, con)
+        delete!(dict[con].terms, param)
+        data.sync = false
+    end
+    # TODO lazy
+    nothing
+end
+
+"""
+    delete_from_constraints(param::Parameter)
+
+Removes parameter `param` from all constraints.
+"""
+function delete_from_constraints(::Type{S}, param::Parameter)
+    data = _getparamdata(param)
+    eq = _get_param_dict(data, S)
+    for (con, gaep) in eq
+        if haskey(gaep.terms, param)
+            if !iszero(gaep.terms[param])
+                data.sync = false
+            end
+            delete!(gaep.terms, param)
+        end
+    end
+    # TODO lazy
+    nothing
+end
+
+function delete_from_constraints(param::Parameter)
+    delete_from_constraints(EQ, param)
+    delete_from_constraints(LE, param)
+    delete_from_constraints(GE, param)
+    # TODO lazy
+    nothing
 end
 
 # operators and mutable arithmetics
