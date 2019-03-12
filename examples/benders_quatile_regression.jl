@@ -78,7 +78,7 @@ gr(); # plotting backend
 #' The estimation of the $\beta$ values relies on observations of the variables:
 #' $\{y^i, x_1^i, \dots, x_n^i\}_i$
 #'
-#' In this notebook we will solver a problem where the explanatory variables
+#' In this notebook we will solve a problem where the explanatory variables
 #' are sinusoids of differents frequencies
 
 #' First, we define the number of explanatory variables and observations
@@ -231,7 +231,7 @@ N_Observations*N_Candidates < 10_000_000 && full_model_regression()
 #' to generate a constraint to the master problem to describe the linear
 #' approximation of the cost function of the shared variables.
 #' In many cases, like stochastic programming, the slave problems have a
-#' interestig structure and might be broken in smaller problem to be solved
+#' interesting structure and might be broken in smaller problem to be solved
 #' in parallel.
 
 #' We will descibe the decomposition similarly to what is done in:
@@ -282,7 +282,7 @@ N_Observations*N_Candidates < 10_000_000 && full_model_regression()
 #'
 #' The collection $ObsSet(k)$ is a sub-set of the N_Observations.
 #' Any partition of the N_Observations collection is valid.
-#' In this notebook we will parition with the function:
+#' In this notebook we will partition with the function:
 
 function ObsSet(K)
     obs_per_block = div(N_Observations, N_Nodes)
@@ -362,7 +362,7 @@ end
 #' ### Master
 
 #' Now that all pieces of the original problem can be representad by
-#' the convex $z_k(x)$ functions we can recast the problem inthe the equivalent form:
+#' the convex $z_k(x)$ functions we can recast the problem in the the equivalent form:
 #'
 #' $$
 #'\begin{align}
@@ -412,8 +412,6 @@ end
 #'
 #' But now its only an underestimated problem.
 #' In the case of our problem it can be written as:
-#'
-#' It is possible to rewrite the above problem 
 #'
 #' $$
 #'\begin{align}
@@ -498,7 +496,7 @@ function slave_solve(PARAM, model, master_solution)
         π = dual.(β)
     else
         # or, in pure JuMP, we query the duals form
-        # constraints tha fix the values of our regression
+        # constraints that fix the values of our regression
         # coefficients
         π = dual.(β_fix)
     end
@@ -536,12 +534,12 @@ end
 #' - Obtain the solution for the $\hat{x}$ (or $\beta$ in our case)
 #' - Fix the values of $\hat{x}$ in the slave problems
 #' - Solve the slave problem
-#' - query the solution of the slave problem to obtiain the supporting hyperplane
+#' - query the solution of the slave problem to obtain the supporting hyperplane
 #' - add hyperplane to master problem
 #' - repeat
 #'
 
-#' Now we grab all the pieces tha we built and we writeh the benders
+#' Now we grab all the pieces that we built and we write the benders
 #' algorithm by calling the above function in a proper order.
 #'
 #' The macros `@timeit` are use to time each step of the algorithm.
