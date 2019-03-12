@@ -125,14 +125,6 @@ Adds one parameter fixed at zero to the model `model`.
 function Parameter(model::JuMP.Model, val::Real)
     params = _getparamdata(model)::ParameterData
 
-    # how to add parameters after solve
-    # dont
-    # how to delete parameter
-    # dont
-    if params.solved
-        error("Parameters cannot be added if a model was already solved")
-    end
-
     ind = params.next_ind
     params.next_ind += 1
 
@@ -166,14 +158,6 @@ function Parameters(model::JuMP.Model, N::Integer)
 end
 function Parameters(model::JuMP.Model, val::Vector{R}) where R
     params = _getparamdata(model)::ParameterData
-
-    # how to add parameters after solve
-    # dont
-    # how to delete parameter
-    # dont
-    if params.solved
-        error("Parameters cannot be added if a model was already solved")
-    end
 
     nparam = length(val)
     out = Parameter[]
