@@ -434,7 +434,7 @@ function JuMP.set_coefficient(con::CtrRef{F, S}, param::Parameter, coef::Number)
         # TODO fix type C
         dict[con] = GAEp{Float64}(zero(Float64), param => coef)
     end
-    if !iszero(coef)
+    if !iszero(coef) && !iszero(data.future_values[param.ind])
         data.sync = false
     end
     # TODO lazy
@@ -450,7 +450,9 @@ function delete_from_constraint(con::CtrRef{F, S}, param::Parameter) where {F, S
     data = _getparamdata(param)
     if haskey(dict, con)
         delete!(dict[con].terms, param)
-        data.sync = false
+        if !iszero(data.future_values[param.ind])
+            data.sync = false
+        end
     end
     # TODO lazy
     nothing
@@ -466,7 +468,7 @@ function delete_from_constraints(::Type{S}, param::Parameter)
     eq = _get_param_dict(data, S)
     for (con, gaep) in eq
         if haskey(gaep.terms, param)
-            if !iszero(gaep.terms[param])
+            if !iszero(gaep.terms[param]) && !iszero(data.future_values[param.ind])
                 data.sync = false
             end
             delete!(gaep.terms, param)
