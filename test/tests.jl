@@ -209,3 +209,117 @@ function test10(args...)
         @test JuMP.dual(α) == 0.0
     end
 end
+
+function test11(args...)
+    @testset "Set coefficient" begin
+        model = ModelWithParams(args...)
+        α = Parameter(model, 1.0)
+        @variable(model, x)
+        cref = @constraint(model, x <= 0.0)
+        @objective(model, Max, x)
+        JuMP.optimize!(model)
+        @test JuMP.value(x) == 0.0
+        @test JuMP.dual(cref) == -1.0
+        @test JuMP.dual(α) == 0.0
+
+        set_coefficient(cref, α, 1.0) 
+        JuMP.optimize!(model)
+        @test JuMP.value(x) == -1.0
+        @test JuMP.dual(cref) == -1.0
+        @test JuMP.dual(α) == 1.0
+    end
+    @testset "Change coefficient" begin
+        model = ModelWithParams(args...)
+        α = Parameter(model, 1.0)
+        ParameterJuMP.setvalue!(α, -1.0)
+        @variable(model, x)
+        cref = @constraint(model, x >= α)
+        @objective(model, Min, x)
+        JuMP.optimize!(model)
+        @test JuMP.value(x) == -1.0
+        @test JuMP.dual(cref) == 1.0
+        @test JuMP.dual(α) == 1.0
+
+        ParameterJuMP.set_coefficient(cref, α, -2.0)
+        JuMP.optimize!(model)
+        @test JuMP.value(x) == -2.0
+        @test JuMP.dual(cref) == 1.0
+        @test JuMP.dual(α) == 2.0
+    end
+    @testset "Set coefficient with lazy" begin
+        model = ModelWithParams(args...)
+        ParameterJuMP.set_lazy_duals(model)
+        α = Parameter(model, 1.0)
+        @variable(model, x)
+        cref = @constraint(model, x <= 0.0)
+        @objective(model, Max, x)
+        JuMP.optimize!(model)
+        @test JuMP.value(x) == 0.0
+        @test JuMP.dual(cref) == -1.0
+        @test JuMP.dual(α) == 0.0
+
+        set_coefficient(cref, α, 1.0) 
+        JuMP.optimize!(model)
+        @test JuMP.value(x) == -1.0
+        @test JuMP.dual(cref) == -1.0
+        @test JuMP.dual(α) == 1.0
+    end
+    @testset "Set coefficient with lazy 2" begin
+        model = ModelWithParams(args...)
+        ParameterJuMP.set_lazy_duals(model)
+        α = Parameter(model, 1.0)
+        b = Parameter(model, 0.0)
+        @variable(model, x)
+        cref = @constraint(model, x <= b)
+        @objective(model, Max, x)
+        JuMP.optimize!(model)
+        @test JuMP.value(x) == 0.0
+        @test JuMP.dual(cref) == -1.0
+        @test JuMP.dual(α) == 0.0
+
+        set_coefficient(cref, α, 1.0) 
+        JuMP.optimize!(model)
+        @test JuMP.value(x) == -1.0
+        @test JuMP.dual(cref) == -1.0
+        @test JuMP.dual(α) == 1.0
+    end
+end
+
+function test12(args...)
+    @testset "Remove parameter from constraint" begin
+        model = ModelWithParams(args...)
+        α = Parameter(model, 1.0)
+        ParameterJuMP.setvalue!(α, -1.0)
+        @variable(model, x)
+        cref = @constraint(model, x >= α)
+        @objective(model, Min, x)
+        JuMP.optimize!(model)
+        @test JuMP.value(x) == -1.0
+        @test JuMP.dual(cref) == 1.0
+        @test JuMP.dual(α) == 1.0
+
+        ParameterJuMP.delete_from_constraint(cref, α)
+        JuMP.optimize!(model)
+        @test JuMP.value(x) == 0.0
+        @test JuMP.dual(cref) == 1.0
+        @test JuMP.dual(α) == 0.0
+    end
+    @testset "Remove parameter from all constraint" begin
+        model = ModelWithParams(args...)
+        α = Parameter(model, 1.0)
+        ParameterJuMP.setvalue!(α, -1.0)
+        @variable(model, x)
+        cref = @constraint(model, x >= α)
+        @objective(model, Min, x)
+        JuMP.optimize!(model)
+        @test JuMP.value(x) == -1.0
+        @test JuMP.dual(cref) == 1.0
+        @test JuMP.dual(α) == 1.0
+
+        ParameterJuMP.delete_from_constraints(α)
+        JuMP.optimize!(model)
+        @test JuMP.value(x) == 0.0
+        @test JuMP.dual(cref) == 1.0
+        @test JuMP.dual(α) == 0.0
+    end
+end
