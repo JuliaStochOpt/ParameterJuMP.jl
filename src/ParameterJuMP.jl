@@ -162,18 +162,19 @@ Adds `N` parameters to the model, all of them fixed in zero.
 function Parameters(model::JuMP.Model, N::Integer)
     return Parameters(model::JuMP.Model, zeros(N))
 end
-function Parameters(model::JuMP.Model, val::Vector{R}) where R
+function Parameters(model::JuMP.Model, val::AbstractArray{R,N}) where {R,N}
     params = _getparamdata(model)::ParameterData
 
     nparam = length(val)
     out = Parameter[]
+    out = similar(val, Parameter)
     sizehint!(out, nparam)
     _addsizehint!(params.inds, nparam)
     _addsizehint!(params.current_values, nparam)
     _addsizehint!(params.future_values, nparam)
     _addsizehint!(params.dual_values, nparam)
 
-    for i in 1:nparam
+    for i in eachindex(val)
         ind = params.next_ind
         params.next_ind += 1
 
@@ -187,7 +188,7 @@ function Parameters(model::JuMP.Model, val::Vector{R}) where R
 
         params.constraints_map[ind] = ParametrizedConstraintRef[]
 
-        push!(out, Parameter(ind, model))
+        out[i] = Parameter(ind, model)
     end
 
     return out
