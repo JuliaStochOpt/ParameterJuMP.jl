@@ -21,5 +21,6 @@ include("tests.jl")
     test7(factory)
     test8(factory)
     test9(factory)
+    test10(factory)
 end
 ;
