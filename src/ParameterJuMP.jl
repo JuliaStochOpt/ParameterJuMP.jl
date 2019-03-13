@@ -24,11 +24,11 @@ struct ParametrizedConstraintRef{C}
     coef::Float64
 end
 
-const CtrRef{F, S} = ConstraintRef{Model,MathOptInterface.ConstraintIndex{F,S}, JuMP.ScalarShape}
-const SAF = MathOptInterface.ScalarAffineFunction{Float64}
-const EQ = MathOptInterface.EqualTo{Float64}
-const LE = MathOptInterface.LessThan{Float64}
-const GE = MathOptInterface.GreaterThan{Float64}
+const CtrRef{F, S} = ConstraintRef{JuMP.Model,MOI.ConstraintIndex{F,S}, JuMP.ScalarShape}
+const SAF = MOI.ScalarAffineFunction{Float64}
+const EQ = MOI.EqualTo{Float64}
+const LE = MOI.LessThan{Float64}
+const GE = MOI.GreaterThan{Float64}
 
 mutable struct ParameterData
     inds::Vector{Int64}
@@ -437,7 +437,23 @@ function JuMP.set_coefficient(con::CtrRef{F, S}, param::Parameter, coef::Number)
     if !iszero(coef) && !iszero(data.future_values[param.ind])
         data.sync = false
     end
-    # TODO lazy
+    if lazy_duals(data)
+        ctr_map = data.constraints_map[param.ind]
+        found_ctr = false
+        for (index, pctr) in enumerate(ctr_map)
+            if pctr.cref == con
+                if found_ctr
+                    deleteat!(ctr_map, index)
+                else
+                    ctr_map[index] = ParametrizedConstraintRef(con, coef)
+                end
+                found_ctr = true
+            end
+        end
+        if found_ctr && !iszero(data.future_values[param.ind])
+            data.sync = false
+        end
+    end
     nothing
 end
 
@@ -454,7 +470,19 @@ function delete_from_constraint(con::CtrRef{F, S}, param::Parameter) where {F, S
             data.sync = false
         end
     end
-    # TODO lazy
+    if lazy_duals(data)
+        ctr_map = data.constraints_map[param.ind]
+        found_ctr = false
+        for (index, pctr) in enumerate(ctr_map)
+            if pctr.cref == con
+                deleteat!(ctr_map, index)
+                found_ctr = true
+            end
+        end
+        if found_ctr && !iszero(data.future_values[param.ind])
+            data.sync = false
+        end
+    end
     nothing
 end
 
@@ -474,7 +502,14 @@ function delete_from_constraints(::Type{S}, param::Parameter)
             delete!(gaep.terms, param)
         end
     end
-    # TODO lazy
+    if lazy_duals(data)
+        if !isempty(data.constraints_map[param.ind]) 
+            data.constraints_map[param.ind] = ParametrizedConstraintRef[]
+            if !iszero(data.future_values[param.ind])
+                data.sync = false
+            end
+        end
+    end
     nothing
 end
 
