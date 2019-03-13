@@ -7,7 +7,7 @@ const MOIU = MOI.Utilities
 using JuMP
 
 export
-ModelWithParams, Parameter, Parameters
+ModelWithParams, Parameter, Parameters, setvalue!
 
 # types
 # ------------------------------------------------------------------------------
@@ -74,8 +74,9 @@ mutable struct ParameterData
 end
 
 lazy_duals(data::ParameterData) = data.lazy
-lazy_duals(model::JuMP.Model) = lazy_duals(getparamdata(model)) 
-set_lazy_duals(model::JuMP.Model) = set_lazy_duals(getparamdata(model))
+lazy_duals(model::JuMP.Model) = lazy_duals(_getparamdata(model))
+
+set_lazy_duals(model::JuMP.Model) = set_lazy_duals(_getparamdata(model))
 function set_lazy_duals(data::ParameterData)
     if isempty(data.current_values)
         data.lazy = true
@@ -85,7 +86,8 @@ function set_lazy_duals(data::ParameterData)
         error("Parameter JuMP's lazy mode can only be activated in empty models.")
     end
 end
-set_not_lazy_duals(model::JuMP.Model) = set_not_lazy_duals(getparamdata(model))
+
+set_not_lazy_duals(model::JuMP.Model) = set_not_lazy_duals(_getparamdata(model))
 function set_not_lazy_duals(data::ParameterData)
     if isempty(data.current_values)
         data.lazy = false
@@ -96,23 +98,32 @@ function set_not_lazy_duals(data::ParameterData)
     end
 end
 
-get_param_dict(data::ParameterData, ::Type{EQ}) = data.parameters_map_saf_in_eq
-get_param_dict(data::ParameterData, ::Type{LE}) = data.parameters_map_saf_in_le
-get_param_dict(data::ParameterData, ::Type{GE}) = data.parameters_map_saf_in_ge
+_get_param_dict(data::ParameterData, ::Type{EQ}) = data.parameters_map_saf_in_eq
+_get_param_dict(data::ParameterData, ::Type{LE}) = data.parameters_map_saf_in_le
+_get_param_dict(data::ParameterData, ::Type{GE}) = data.parameters_map_saf_in_ge
 
-getmodel(p::Parameter) = p.model
-getparamdata(p::Parameter) = getparamdata(getmodel(p))::ParameterData
-# getparamdata(model::JuMP.Model) = model.ext[:params]::ParameterData
-function getparamdata(model::JuMP.Model)
+_getmodel(p::Parameter) = p.model
+_getparamdata(p::Parameter) = _getparamdata(_getmodel(p))::ParameterData
+# _getparamdata(model::JuMP.Model) = model.ext[:params]::ParameterData
+function _getparamdata(model::JuMP.Model)
     !haskey(model.ext, :params) && error("In order to use Parameters the model must be created with the ModelWithParams constructor")
     return model.ext[:params]
 end
 
 is_sync(data::ParameterData) = data.sync
-is_sync(model::JuMP.Model) = is_sync(getparamdata(model))
+is_sync(model::JuMP.Model) = is_sync(_getparamdata(model))
 
+"""
+    Parameter(model::JuMP.Model, val::Real)::Parameter
+
+Adds one parameter fixed at `val` to the model `model`.
+
+    Parameter(model::JuMP.Model)::Parameter
+
+Adds one parameter fixed at zero to the model `model`.
+"""
 function Parameter(model::JuMP.Model, val::Real)
-    params = getparamdata(model)::ParameterData
+    params = _getparamdata(model)::ParameterData
 
     # how to add parameters after solve
     # dont
@@ -139,13 +150,22 @@ function Parameter(model::JuMP.Model, val::Real)
 end
 Parameter(model) = Parameter(model, 0.0)
 
-addsizehint!(vec::Vector, len::Integer) = sizehint!(vec, len+length(vec))
+_addsizehint!(vec::Vector, len::Integer) = sizehint!(vec, len+length(vec))
 
+"""
+    Parameters(model::JuMP.Model, val::Vector{R})::Vector{Parameter}
+
+Adds one parameter for each element of the vector `val`.
+
+    Parameters(model::JuMP.Model, N::Integer)::Vector{Parameter}
+
+Adds `N` parameters to the model, all of them fixed in zero.
+"""
 function Parameters(model::JuMP.Model, N::Integer)
     return Parameters(model::JuMP.Model, zeros(N))
 end
 function Parameters(model::JuMP.Model, val::Vector{R}) where R
-    params = getparamdata(model)::ParameterData
+    params = _getparamdata(model)::ParameterData
 
     # how to add parameters after solve
     # dont
@@ -158,10 +178,10 @@ function Parameters(model::JuMP.Model, val::Vector{R}) where R
     nparam = length(val)
     out = Parameter[]
     sizehint!(out, nparam)
-    addsizehint!(params.inds, nparam)
-    addsizehint!(params.current_values, nparam)
-    addsizehint!(params.future_values, nparam)
-    addsizehint!(params.dual_values, nparam)
+    _addsizehint!(params.inds, nparam)
+    _addsizehint!(params.current_values, nparam)
+    _addsizehint!(params.future_values, nparam)
+    _addsizehint!(params.dual_values, nparam)
 
     for i in 1:nparam
         ind = params.next_ind
@@ -187,16 +207,23 @@ end
 # ------------------------------------------------------------------------------
 
 function JuMP.value(p::Parameter)
-    params = getparamdata(p)::ParameterData
+    params = _getparamdata(p)::ParameterData
     params.future_values[p.ind]
 end
+
+"""
+    setvalue!(p::Parameter, val::Real)::Nothing
+
+Sets the parameter `p` to the new value `val`.
+"""
 function setvalue!(p::Parameter, val::Real)
-    params = getparamdata(p)::ParameterData
+    params = _getparamdata(p)::ParameterData
     params.sync = false
     params.future_values[p.ind] = val
+    return nothing
 end
 function JuMP.dual(p::Parameter)
-    params = getparamdata(p)::ParameterData
+    params = _getparamdata(p)::ParameterData
     if lazy_duals(params)
         return _getdual(p)
     else
@@ -211,7 +238,7 @@ function _getdual(pcr::ParametrizedConstraintRef)::Float64
     pcr.coef * JuMP.dual(pcr.cref)
 end
 function _getdual(model::JuMP.Model, ind::Integer)
-    params = getparamdata(model)::ParameterData
+    params = _getparamdata(model)::ParameterData
     # See (12) in http://www.juliaopt.org/MathOptInterface.jl/stable/apimanual.html#Duals-1
     # in the dual objective: - sum_i b_i^T y_i
     # Here b_i depends on the param and is b_i' + coef * param
@@ -243,150 +270,20 @@ const PAE{C} = ParametrizedAffExpr{C}
 const PAEC{S} = JuMP.ScalarConstraint{PAE{Float64}, S}
 const PVAEC{S} = JuMP.VectorConstraint{PAE{Float64}, S}
 
-# Operators
-# ------------------------------------------------------------------------------
-
-#=
-    Number
-=#
-
-# Number--Parameter
-Base.:(+)(lhs::C, rhs::Parameter) where C<:Number = PAE{C}(GAEv{C}(convert(Float64, lhs)), GAEp{C}(zero(C), rhs => +one(C)))
-Base.:(-)(lhs::C, rhs::Parameter) where C<:Number = PAE{C}(GAEv{C}(convert(Float64, lhs)), GAEp{C}(zero(C), rhs => -one(C)))
-Base.:(*)(lhs::C, rhs::Parameter) where C<:Number = PAE{C}(GAEv{C}(zero(C)), GAEp{C}(zero(C), rhs => lhs))
-
-# Number--PAE
-Base.:(+)(lhs::Number, rhs::PAE{C}) where C<:Number = PAE{C}(lhs+rhs.v, copy(rhs.p))
-Base.:(-)(lhs::Number, rhs::PAE{C}) where C<:Number = PAE{C}(lhs-rhs.v,-rhs.p)
-Base.:(*)(lhs::Number, rhs::PAE{C}) where C<:Number = PAE{C}(lhs*rhs.v, lhs*rhs.p)
-
-#=
-    Parameter
-=#
-
-# AbstractJuMPScalar
-Base.:(-)(lhs::Parameter) = PAE{Float64}(GAEv{Float64}(0.0), GAEp{Float64}(0.0, lhs => -1.0))
-
-# Parameter--Number
-Base.:(+)(lhs::Parameter, rhs::Number) = (+)(rhs, lhs)
-Base.:(-)(lhs::Parameter, rhs::Number) = (+)(-rhs, lhs)
-Base.:(*)(lhs::Parameter, rhs::Number) = (*)(rhs, lhs)
-Base.:(/)(lhs::Parameter, rhs::Number) = (*)(1.0 / rhs, lhs)
-
-# Parameter--VariableRef
-Base.:(+)(lhs::Parameter, rhs::JuMP.VariableRef)::ParametrizedAffExpr = PAE{Float64}(GAEv{Float64}(0.0, rhs => +1.0), GAEp{Float64}(0.0, lhs => 1.0))
-Base.:(-)(lhs::Parameter, rhs::JuMP.VariableRef)::ParametrizedAffExpr = PAE{Float64}(GAEv{Float64}(0.0, rhs => -1.0), GAEp{Float64}(0.0, lhs => 1.0))
-
-# Parameter--Parameter
-Base.:(+)(lhs::Parameter, rhs::Parameter) = PAE{Float64}(GAEv{Float64}(0.0), GAEp{Float64}(0.0, lhs => 1.0, rhs => +1.0))
-Base.:(-)(lhs::Parameter, rhs::Parameter) = PAE{Float64}(GAEv{Float64}(0.0), GAEp{Float64}(0.0, lhs => 1.0, rhs => -1.0))
-
-# Parameter--GAEp
-# (+){C}(lhs::Parameter, rhs::GAEp{C})::GAEp{C} = GAEp{C}(vcat(rhs.vars,lhs),vcat(rhs.coeffs,one(C)))
-# (-){C}(lhs::Parameter, rhs::GAEp{C})::GAEp{C} = GAEp{C}(vcat(rhs.vars,lhs),vcat(-rhs.coeffs,one(C)))
-
-# Parameter--GAEv/GenericAffExpr{C,VariableRef}
-Base.:(+)(lhs::Parameter, rhs::GAEv{C}) where {C} = PAE{C}(copy(rhs),GAEp{C}(zero(C), lhs => 1.))
-Base.:(-)(lhs::Parameter, rhs::GAEv{C}) where {C} = PAE{C}(-rhs,GAEp{C}(zero(C), lhs => 1.))
-
-# Parameter--ParametrizedAffExpr{C}
-Base.:(+)(lhs::Parameter, rhs::PAE{C}) where {C} = PAE{C}(copy(rhs.v),lhs+rhs.p)
-Base.:(-)(lhs::Parameter, rhs::PAE{C}) where {C} = PAE{C}(-rhs.v,lhs-rhs.p)
-
-#=
-    VariableRef
-=#
-
-# VariableRef--Parameter
-Base.:(+)(lhs::JuMP.VariableRef, rhs::Parameter) = PAE{Float64}(GAEv{Float64}(zero(Float64), lhs => 1.0),GAEp{Float64}(zero(Float64), rhs =>  1.0))
-Base.:(-)(lhs::JuMP.VariableRef, rhs::Parameter) = PAE{Float64}(GAEv{Float64}(zero(Float64), lhs => 1.0),GAEp{Float64}(zero(Float64), rhs => -1.0))
-
-# VariableRef--GenericAffExpr{C,Parameter}
-Base.:(+)(lhs::JuMP.VariableRef, rhs::GAEp{C}) where {C} = PAE{C}(GAEv{C}(zero(C), lhs => 1.),copy(rhs))
-Base.:(-)(lhs::JuMP.VariableRef, rhs::GAEp{C}) where {C} = PAE{C}(GAEv{C}(zero(C), lhs => 1.),-rhs)
-
-# VariableRef--ParametrizedAffExpr{C}
-Base.:(+)(lhs::JuMP.VariableRef, rhs::PAE{C}) where {C} = PAE{C}(GAEv{C}(zero(C), lhs => 1.),copy(rhs.p))
-Base.:(-)(lhs::JuMP.VariableRef, rhs::PAE{C}) where {C} = PAE{C}(GAEv{C}(zero(C), lhs => 1.),-rhs.p)
-
-#=
-    GenericAffExpr{C,VariableRef}
-=#
-
-# GenericAffExpr{C,VariableRef}--Parameter
-Base.:(+)(lhs::GAEv{C}, rhs::Parameter) where {C} = (+)(rhs,lhs)
-Base.:(-)(lhs::GAEv{C}, rhs::Parameter) where {C} = (+)(-rhs,lhs)
-
-# GenericAffExpr{C,VariableRef}--GenericAffExpr{C,Parameter}
-Base.:(+)(lhs::GAEv{C}, rhs::GAEp{C}) where {C} = PAE{C}(copy(lhs),copy(rhs))
-Base.:(-)(lhs::GAEv{C}, rhs::GAEp{C}) where {C} = PAE{C}(copy(lhs),-rhs)
-
-# GenericAffExpr{C,VariableRef}--ParametrizedAffExpr{C}
-Base.:(+)(lhs::GAEv{C}, rhs::PAE{C}) where {C} = PAE{C}(lhs+rhs.v,copy(rhs.p))
-Base.:(-)(lhs::GAEv{C}, rhs::PAE{C}) where {C} = PAE{C}(lhs-rhs.v,-rhs.p)
-
-#=
-    GenericAffExpr{C,Parameter}/GAEp
-=#
-
-# GenericAffExpr{C,Parameter}--Parameter
-# DONE in JuMP
-
-# GenericAffExpr{C,Parameter}--VariableRef
-Base.:(+)(lhs::GAEp{C}, rhs::JuMP.VariableRef) where {C} = (+)(rhs,lhs)
-Base.:(-)(lhs::GAEp{C}, rhs::JuMP.VariableRef) where {C} = (-)(-rhs,lhs)
-
-# GenericAffExpr{C,Parameter}--GenericAffExpr{C,VariableRef}
-Base.:(+)(lhs::GAEp{C}, rhs::GAEv{C}) where {C} = (+)(rhs,lhs)
-Base.:(-)(lhs::GAEp{C}, rhs::GAEv{C}) where {C} = (-)(-rhs,lhs)
-
-# GenericAffExpr{C,Parameter}--GenericAffExpr{C,Parameter}
-# DONE in JuMP
-
-# GenericAffExpr{C,Parameter}--ParametrizedAffExpr{C}
-Base.:(+)(lhs::GAEp{C}, rhs::PAE{C}) where {C} = PAE{C}(copy(rhs.v),lhs+rhs.p)
-Base.:(-)(lhs::GAEp{C}, rhs::PAE{C}) where {C} = PAE{C}(-rhs.v,lhs-rhs.p)
-
-#=
-    ParametrizedAffExpr{C}
-=#
-
-# Number--PAE
-Base.:(+)(lhs::PAE, rhs::Number) = (+)(rhs,lhs)
-Base.:(-)(lhs::PAE, rhs::Number) = (-)(-rhs,lhs)
-Base.:(*)(lhs::PAE, rhs::Number) = (*)(rhs,lhs)
-
-# ParametrizedAffExpr{C}--Parameter
-Base.:(+)(lhs::PAE{C}, rhs::Parameter) where {C} = (+)(rhs,lhs)
-Base.:(-)(lhs::PAE{C}, rhs::Parameter) where {C} = (-)(-rhs,lhs)
-
-# VariableRef--ParametrizedAffExpr{C}
-Base.:(+)(lhs::PAE{C}, rhs::JuMP.VariableRef) where {C} = (+)(rhs,lhs)
-Base.:(-)(lhs::PAE{C}, rhs::JuMP.VariableRef) where {C} = (-)(-rhs,lhs)
-
-# ParametrizedAffExpr{C}--GenericAffExpr{C,VariableRef}
-# ParametrizedAffExpr{C}--GenericAffExpr{C,Parameter}
-Base.:(+)(lhs::PAE{C}, rhs::GAE{C,V}) where {C,V} = (+)(rhs,lhs)
-Base.:(-)(lhs::PAE{C}, rhs::GAE{C,V}) where {C,V} = (-)(-rhs,lhs)
-
-# ParametrizedAffExpr{C}--ParametrizedAffExpr{C}
-Base.:(+)(lhs::PAE{C}, rhs::PAE{C}) where {C} = PAE{C}(lhs.v+rhs.v,lhs.p+rhs.p)
-Base.:(-)(lhs::PAE{C}, rhs::PAE{C}) where {C} = PAE{C}(lhs.v-rhs.v,lhs.p-rhs.p)
-
 
 # Build constraint
 # ------------------------------------------------------------------------------
 
 # TODO should be in MOI, MOIU or JuMP
-shift_constant(set::S, offset) where S <: Union{MOI.LessThan,MOI.GreaterThan,MOI.EqualTo} = S(MOIU.getconstant(set) + offset)
-function shift_constant(set::MOI.Interval, offset)
+_shift_constant(set::S, offset) where S <: Union{MOI.LessThan,MOI.GreaterThan,MOI.EqualTo} = S(MOIU.getconstant(set) + offset)
+function _shift_constant(set::MOI.Interval, offset)
     MOI.Interval(set.lower + offset, set.upper + offset)
 end
 
 function JuMP.build_constraint(_error::Function, aff::ParametrizedAffExpr, set::S) where S <: Union{MOI.LessThan,MOI.GreaterThan,MOI.EqualTo}
     offset = aff.v.constant
     aff.v.constant = 0.0
-    shifted_set = shift_constant(set, -offset)
+    shifted_set = _shift_constant(set, -offset)
     return JuMP.ScalarConstraint(aff, shifted_set)
 end
 
@@ -402,7 +299,7 @@ function JuMP.add_constraint(m::JuMP.Model, c::PAEC{S}, name::String="") where S
     # JuMP´s standard add_constrint
     cref = JuMP.add_constraint(m, c_lin, name)
 
-    data = getparamdata(m)::ParameterData
+    data = _getparamdata(m)::ParameterData
 
     # needed for lazy get dual
     if lazy_duals(data)
@@ -412,7 +309,7 @@ function JuMP.add_constraint(m::JuMP.Model, c::PAEC{S}, name::String="") where S
     end
 
     # save the parameter part of a parametric affine expression
-    get_param_dict(data, S)[cref] = c.func.p
+    _get_param_dict(data, S)[cref] = c.func.p
 
     return cref
 end
@@ -420,24 +317,31 @@ end
 # solve
 # ------------------------------------------------------------------------------
 
+"""
+    sync(data::ParameterData)::Nothing
+
+Forces the model to update its constraints to the new values of the
+Parameters.
+"""
 function sync(data::ParameterData)
     if !is_sync(data)
-        update_constraints(data, EQ)
-        update_constraints(data, LE)
-        update_constraints(data, GE)
+        _update_constraints(data, EQ)
+        _update_constraints(data, LE)
+        _update_constraints(data, GE)
         data.current_values .= data.future_values
         data.sync = true
-    end
-end
-
-function update_constraints(data, ::Type{S}) where S
-    for (cref, gaep) in get_param_dict(data, S)
-        update_constraint(data, cref, gaep)
     end
     return nothing
 end
 
-function update_constraint(data, cref, gaep)
+function _update_constraints(data, ::Type{S}) where S
+    for (cref, gaep) in _get_param_dict(data, S)
+        _update_constraint(data, cref, gaep)
+    end
+    return nothing
+end
+
+function _update_constraint(data, cref, gaep)
     ci = JuMP.index(cref)
     # For scalar constraints, the constant in the function is zero and the
     # constant is stored in the set. Since `pcr.coef` corresponds to the
@@ -447,13 +351,14 @@ function update_constraint(data, cref, gaep)
     @inbounds for (param, coef) in gaep.terms
         val += coef * (data.future_values[param.ind] - data.current_values[param.ind])
     end
-    new_set = shift_constant(old_set, -val)
+    new_set = _shift_constant(old_set, -val)
     MOI.set(cref.model.moi_backend, MOI.ConstraintSet(), ci, new_set)
     return nothing
 end
 
-function param_optimizehook(m::JuMP.Model; kwargs...)
-    data = getparamdata(m)::ParameterData
+
+function _param_optimizehook(m::JuMP.Model; kwargs...)
+    data = _getparamdata(m)::ParameterData
 
     # sync model rhs to newest parameter values
     sync(data)
@@ -463,21 +368,21 @@ function param_optimizehook(m::JuMP.Model; kwargs...)
 
     if !lazy_duals(data) && JuMP.has_duals(m)
         fill!(data.dual_values, 0.0)
-        update_duals(data, EQ)
-        update_duals(data, GE)
-        update_duals(data, LE)
+        _update_duals(data, EQ)
+        _update_duals(data, GE)
+        _update_duals(data, LE)
     end
     return ret
 end
 
-function update_duals(data, ::Type{S}) where S
-    for (cref, gaep) in get_param_dict(data, S)
-        update_duals(data, cref, gaep)
+function _update_duals(data, ::Type{S}) where S
+    for (cref, gaep) in _get_param_dict(data, S)
+        _update_duals(data, cref, gaep)
     end
     return nothing
 end
 
-function update_duals(data, cref, gaep)
+function _update_duals(data, cref, gaep)
     dual_sol = JuMP.dual(cref)
     @inbounds for (param, coef) in gaep.terms
         data.dual_values[param.ind] -= coef * dual_sol
@@ -485,104 +390,35 @@ function update_duals(data, cref, gaep)
     return nothing
 end
 
+"""
+    ModelWithParams(args...; kwargs...)::JuMP.Model
+
+Returns a JuMP.Model able to handle `Parameters`.
+
+`args` and `kwargs` are the same parameters that would be passed
+to the regular `Model` constructor.
+
+Example using GLPK solver:
+
+```julia
+    model = ModelWithParams(with_optimizer(GLPK.Optimizer))
+```
+"""
 function ModelWithParams(args...; kwargs...)
 
     m = JuMP.Model(args...; kwargs...)
 
-    JuMP.set_optimize_hook(m, param_optimizehook)
+    JuMP.set_optimize_hook(m, _param_optimizehook)
 
     m.ext[:params] = ParameterData()
 
     return m
 end
 
-
-# destructive_add!
+# operators and mutable arithmetics
 # ------------------------------------------------------------------------------
 
-# destructive_add!{C}(ex::Number, c::Number, x::Number) = ex + c*x
-
-#=
-    Number
-=#
-
-JuMP.destructive_add!(ex::Number, c::C, x::Parameter) where C<:Number = PAE{C}(GAEv{C}(ex),GAEp{C}(zero(C), x => c))
-JuMP.destructive_add!(ex::Number, x::Parameter, c::C) where C<:Number = JuMP.destructive_add!(ex, c, x)
-JuMP.destructive_add!(ex::Number, c::C, x::PAE) where C<:Number = PAE{C}(JuMP.destructive_add!(ex, c, x.v), JuMP.destructive_add!(0.0, c, x.p))
-
-#=
-    VariableRef
-=#
-
-JuMP.destructive_add!(ex::JuMP.VariableRef, c::C, x::Parameter) where C<:Number = PAE{C}(GAEv{C}(zero(C), ex => one(C)), GAEp{C}(zero(C), x => c))
-JuMP.destructive_add!(ex::JuMP.VariableRef, x::Parameter, c::C) where C<:Number = JuMP.destructive_add!(ex, c, x)
-
-#=
-    Parameter
-=#
-
-JuMP.destructive_add!(ex::Parameter, c::Number, x::Number) = c * x + ex
-
-JuMP.destructive_add!(ex::Parameter, c::C, x::JuMP.VariableRef) where C<:Number = PAE{C}(GAEv{C}(zero(C), x => c), GAEp{C}(zero(C), ex => one(C)))
-JuMP.destructive_add!(ex::Parameter, x::JuMP.VariableRef, c::Number) = JuMP.destructive_add!(ex, c, x)
-
-JuMP.destructive_add!(ex::Parameter, c::C, x::Parameter) where {C<:Number} = PAE{C}(zero(GAEv{C}),  GAEp{C}(zero(C), ex => one(C), x => c))
-JuMP.destructive_add!(ex::Parameter, x::Parameter, c::C) where {C<:Number} = JuMP.destructive_add!(ex, x, c)
-
-#=
-    GAEp
-=#
-
-JuMP.destructive_add!(aff::GAEp{C}, c::Number, x::Number) where {C} = PAE{C}(GAEv{C}(c*x), aff)
-
-JuMP.destructive_add!(aff::GAEp{C}, x::Union{JuMP.VariableRef, GAEv{C}}, c::Number) where C = JuMP.destructive_add!(aff, c, x)
-JuMP.destructive_add!(aff::GAEp{C}, c::Number, x::Union{JuMP.VariableRef, GAEv{C}}) where C = PAE{C}(GAEv{C}(zero(C), x => convert(C, c)), aff)
-
-#=
-    GAEv
-=#
-
-JuMP.destructive_add!(aff::GAEv{C}, x::Union{Parameter, GAEp{C}}, c::Number) where C = JuMP.destructive_add!(aff, c, x)
-JuMP.destructive_add!(aff::GAEv{C}, c::Number, x::Union{Parameter, GAEp{C}}) where C = PAE{C}(aff, GAEp{C}(zero(C), x => convert(C, c)))
-
-#=
-    PAE
-=#
-
-JuMP.destructive_add!(aff::PAE, x::Union{JuMP.VariableRef, GAEv, Parameter, GAEp}, c::Number) = JuMP.destructive_add!(aff, c, x)
-function JuMP.destructive_add!(aff::PAE, c::Number, x::Union{JuMP.VariableRef, GAEv})
-    if !iszero(c)
-        aff.v = JuMP.destructive_add!(aff.v, c, x)
-    end
-    aff
-end
-function JuMP.destructive_add!(aff::PAE, c::Number, x::Union{Parameter, GAEp})
-    if !iszero(c)
-        aff.p = JuMP.destructive_add!(aff.p, c, x)
-    end
-    aff
-end
-function JuMP.destructive_add!(aff::PAE, c::Number, x::Number)
-    if !iszero(c)
-        aff.v = JuMP.destructive_add!(aff.v, c, x)
-    end
-    aff
-end
-
-function JuMP.add_to_expression!(aff::PAE, other::Number)
-    JuMP.add_to_expression!(aff.v, other)
-end
-function JuMP.add_to_expression!(aff::PAE, new_var::JuMP.VariableRef, new_coef)
-    JuMP.add_to_expression!(aff.v, new_coef, new_var)
-end
-function JuMP.add_to_expression!(aff::PAE, new_coef, new_var::JuMP.VariableRef)
-    JuMP.add_to_expression!(aff.v, new_coef, new_var)
-end
-function JuMP.add_to_expression!(aff::PAE, new_param::Parameter, new_coef)
-    JuMP.add_to_expression!(aff.p, new_coef, new_param)
-end
-function JuMP.add_to_expression!(aff::PAE, new_coef, new_param::Parameter)
-    JuMP.add_to_expression!(aff.p, new_coef, new_param)
-end
+include("operators.jl")
+include("mutable_arithmetics.jl")
 
 end

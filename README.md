@@ -50,7 +50,7 @@ It is possible to change the current value of a parameter with the
 function:
 
 ```julia
-ParameterJuMP.setvalue(p::Parameter, new_value::Number)
+ParameterJuMP.setvalue!(p::Parameter, new_value::Number)
 ```
 
 Finally, the `dual` function of JuMP is overloaded to return duals
@@ -102,7 +102,7 @@ optimize!(model)
 dual(a)
 
 # modify the value of the parameter a to 20 
-ParameterJuMP.setvalue(a, 20)
+ParameterJuMP.setvalue!(a, 20)
 
 # solve the model with the new value of the parameter
 optimize!(model)
