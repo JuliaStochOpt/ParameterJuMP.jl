@@ -187,3 +187,25 @@ function test9(args...)
         @test !ParameterJuMP.is_sync(model_3)
     end
 end
+
+function test10(args...)
+    @testset "Add after solve" begin
+        model = ModelWithParams(args...)
+        α = Parameter(model, 1.0)
+        ParameterJuMP.setvalue!(α, -1.0)
+        @variable(model, x)
+        cref = @constraint(model, x <= α)
+        @objective(model, Max, x)
+        JuMP.optimize!(model)
+        @test JuMP.value(x) == -1.0
+        @test JuMP.dual(cref) == -1.0
+        @test JuMP.dual(α) == -1.0
+
+        b = Parameter(model, -2.0)
+        cref = @constraint(model, x <= b)
+        JuMP.optimize!(model)
+        @test JuMP.value(x) == -2.0
+        @test JuMP.dual(cref) == -1.0
+        @test JuMP.dual(α) == 0.0
+    end
+end
