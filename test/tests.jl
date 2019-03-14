@@ -167,11 +167,12 @@ function test8(args...)
 end
 
 function test9(args...)
-    @testset "Test ErrorException(s)" begin
+    @testset "Test bad model error" begin
         model_1 = Model(args...)
         @test_throws ErrorException x = Parameters(model_1, ones(5))
         @test_throws ErrorException y = Parameter(model_1, 1.0)
-
+    end
+    @testset "Test lazy duals errors" begin
         model_2 = ModelWithParams(args...)
         ParameterJuMP.set_lazy_duals(model_2)
         ParameterJuMP.set_lazy_duals(model_2) # warn
@@ -321,5 +322,25 @@ function test12(args...)
         @test JuMP.value(x) == 0.0
         @test JuMP.dual(cref) == 1.0
         @test JuMP.dual(α) == 0.0
+    end
+end
+
+function test13(args...)
+    @testset "Test no duals errors" begin
+        model = ModelWithParams(args...)
+        ParameterJuMP.set_no_duals(model)
+        α = Parameter(model, 1.0)
+        ParameterJuMP.setvalue!(α, -1.0)
+        @variable(model, x)
+        cref = @constraint(model, x == α)
+        @objective(model, Max, x)
+        JuMP.optimize!(model)
+        @test JuMP.value(x) == -1.0
+        @test JuMP.dual(cref) == -1.0
+        @test_throws ErrorException JuMP.dual(α)
+
+        model_2 = ModelWithParams(args...)
+        y = Parameter(model_2, 1.0)
+        @test_throws ErrorException ParameterJuMP.set_no_duals(model_2)
     end
 end
