@@ -54,6 +54,10 @@ mutable struct ParameterData
 
     # solved::Bool
 
+    has_deletion::Bool
+    index_map::Dict{Int64, Int64}
+
+
     lazy::Bool
     dual_values::Vector{Float64}
     function ParameterData()
@@ -68,8 +72,25 @@ mutable struct ParameterData
             Dict{CtrRef{SAF, GE}, JuMP.GenericAffExpr{Float64,Parameter}}(),
             # false,
             false,
+            Dict{Int64, Int64}(),
+            false,
             Float64[],
             )
+    end
+end
+
+"""
+    index(p::Parameter)::Int64
+
+Return the internal index of the parameter `p`.
+"""
+index(p::Parameter) = index(_getparamdata(p.model), p)::Int64
+index(model::JuMP.Model, p::Parameter) = index(_getparamdata(model), p)::Int64
+function index(data::ParameterData, p::Parameter)::Int64
+    if data.has_deletion
+        return data.index_map[p.ind]
+    else
+        return p.ind
     end
 end
 
