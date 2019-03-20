@@ -7,7 +7,7 @@ const MOIU = MOI.Utilities
 using JuMP
 
 export
-ModelWithParams, Parameter, Parameters, setvalue!, fix
+ModelWithParams, Parameter, Parameters
 
 # types
 # ------------------------------------------------------------------------------
@@ -55,6 +55,8 @@ mutable struct ParameterData
     # solved::Bool
 
     lazy::Bool
+
+    no_duals::Bool
     dual_values::Vector{Float64}
     function ParameterData()
         new(Int64[],
@@ -68,8 +70,23 @@ mutable struct ParameterData
             Dict{CtrRef{SAF, GE}, JuMP.GenericAffExpr{Float64,Parameter}}(),
             # false,
             false,
+            false,
             Float64[],
             )
+    end
+end
+
+no_duals(data::ParameterData) = data.no_duals
+no_duals(model::JuMP.Model) = no_duals(_getparamdata(model))
+
+set_no_duals(model::JuMP.Model) = set_no_duals(_getparamdata(model))
+function set_no_duals(data::ParameterData)
+    if isempty(data.current_values)
+        data.no_duals = true
+    elseif no_duals(data)
+        @warn "No duals mode is already activated"
+    else
+        error("Parameter JuMP's no duals mode can only be activated in empty models.")
     end
 end
 
@@ -245,7 +262,7 @@ function parameter_optimizehook(m::JuMP.Model; kwargs...)
     ret = JuMP.optimize!(m::JuMP.Model, ignore_optimize_hook = true, kwargs...)
 
     # update duals for later query
-    if JuMP.has_duals(m)
+    if !no_duals(data) && JuMP.has_duals(m)
         _update_duals(data)
     end
     return ret

@@ -25,11 +25,11 @@ JuMP.FixRef(p::Parameter) =
 
 
 """
-    setvalue!(p::Parameter, val::Real)::Nothing
+    fix(p::Parameter, val::Real)::Nothing
 
 Sets the parameter `p` to the new value `val`.
 """
-function setvalue!(p::Parameter, val::Real)
+function fix(p::Parameter, val::Real)
     params = _getparamdata(p)::ParameterData
     params.sync = false
     params.future_values[p.ind] = val

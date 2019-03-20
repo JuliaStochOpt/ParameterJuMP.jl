@@ -42,12 +42,12 @@ using JuMP
 #' such as Clp, Xpress, Gurobi, CPLEX and so on)
 
 #+ echo = false
-# using GLPK
-# const OPTIMIZER = GLPK.Optimizer;
+# using Xpress
+# const OPTIMIZER = Xpress.Optimizer;
 #+
 
-using Xpress
-const OPTIMIZER = Xpress.Optimizer;
+using GLPK
+const OPTIMIZER = GLPK.Optimizer;
 
 #' TimerOutputs: a time measuring library to demonstrate the advantage of using ParameterJuMP
 using TimerOutputs
@@ -476,7 +476,7 @@ function slave_solve(PARAM, model, master_solution)
         # *parameters* can be set to new values and the optimization
         # model will be automatically updated
         β = model[2]
-        ParameterJuMP.setvalue!.(β, β0)
+        fix.(β, β0)
     else
         # JuMP also has the hability to fix variables to new values
         β_fixed = model[3]
