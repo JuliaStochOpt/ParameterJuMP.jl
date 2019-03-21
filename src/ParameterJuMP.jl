@@ -530,7 +530,7 @@ function delete_from_constraints(::Type{S}, param::Parameter) where S
         end
     end
     if lazy_duals(data)
-        if !isempty(data.constraints_map[param.ind]) 
+        if !isempty(data.constraints_map[param.ind])
             data.constraints_map[param.ind] = ParametrizedConstraintRef[]
             if !iszero(data.future_values[param.ind])
                 data.sync = false
@@ -553,5 +553,5 @@ end
 
 include("operators.jl")
 include("mutable_arithmetics.jl")
-
+include("print.jl")
 end
