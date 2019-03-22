@@ -61,8 +61,8 @@ Base.:(+)(lhs::JuMP.VariableRef, rhs::GAEp{C}) where {C} = PAE{C}(GAEv{C}(zero(C
 Base.:(-)(lhs::JuMP.VariableRef, rhs::GAEp{C}) where {C} = PAE{C}(GAEv{C}(zero(C), lhs => 1.),-rhs)
 
 # VariableRef--ParametrizedAffExpr{C}
-Base.:(+)(lhs::JuMP.VariableRef, rhs::PAE{C}) where {C} = PAE{C}(GAEv{C}(zero(C), lhs => 1.),copy(rhs.p))
-Base.:(-)(lhs::JuMP.VariableRef, rhs::PAE{C}) where {C} = PAE{C}(GAEv{C}(zero(C), lhs => 1.),-rhs.p)
+Base.:(+)(lhs::JuMP.VariableRef, rhs::PAE{C}) where {C} = PAE{C}(lhs + rhs.v, copy(rhs.p))
+Base.:(-)(lhs::JuMP.VariableRef, rhs::PAE{C}) where {C} = PAE{C}(lhs - rhs.v, -rhs.p)
 
 #=
     GenericAffExpr{C,VariableRef}
