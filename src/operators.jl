@@ -108,15 +108,16 @@ Base.:(-)(lhs::GAEp{C}, rhs::PAE{C}) where {C} = PAE{C}(-rhs.v,lhs-rhs.p)
 =#
 
 # Make zero
-Base.zero(::Type{PAE{C}}) where {C} = PAE{C}(GAEp{C}(zero(C)), GAEp{C}(zero(C)))
-Base.zero(::Type{GAEp{C}}) where {C} = GAEp{C}(one(C))
+Base.zero(::Type{GAEp{C}}) where {C} = GAEp{C}(zero(C))
+Base.zero(::Type{PAE{C}}) where {C} = PAE{C}(GAEv{C}(zero(C)), zero(GAEp{C}))
 Base.zero(a::GAEp) = zero(typeof(a))
-
+Base.zero(a::PAE) = zero(typeof(a))
 
 # Make one
-Base.one(::Type{PAE{C}}) where {C} = PAE{C}(GAEp{C}(one(C)), GAEp{C}(one(C)))
 Base.one(::Type{GAEp{C}}) where {C} = GAEp{C}(one(C))
-Base.one(a::GAEp) =  one(typeof(a))
+Base.one(::Type{PAE{C}}) where {C} = PAE{C}(GAEv{C}(one(C)), one(GAEp{C}))
+Base.one(a::GAEp) = one(typeof(a))
+Base.one(a::PAE) = one(typeof(a))
 
 # Number--PAE
 Base.:(+)(lhs::PAE, rhs::Number) = (+)(rhs,lhs)
