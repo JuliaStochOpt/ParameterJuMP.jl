@@ -85,7 +85,8 @@ Base.:(-)(lhs::GAEv{C}, rhs::PAE{C}) where {C} = PAE{C}(lhs-rhs.v,-rhs.p)
 =#
 
 # GenericAffExpr{C,Parameter}--Parameter
-# DONE in JuMP
+Base.:(+)(lhs::GAEp{C}, rhs::Parameter) where {C} = JuMP.add_to_expression!(lhs,rhs)
+Base.:(-)(lhs::GAEp{C}, rhs::Parameter) where {C} = JuMP.add_to_expression!(lhs,-rhs)
 
 # GenericAffExpr{C,Parameter}--VariableRef
 Base.:(+)(lhs::GAEp{C}, rhs::JuMP.VariableRef) where {C} = (+)(rhs,lhs)
