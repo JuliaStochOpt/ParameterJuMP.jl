@@ -108,4 +108,4 @@ Copy
 
 =#
 
-Base.copy(aff::PAE) = PAE(copy(aff.v), copy(aff.p))
+Base.copy(aff::PAE{C}) where {C} = PAE{C}(copy(aff.v), copy(aff.p))
