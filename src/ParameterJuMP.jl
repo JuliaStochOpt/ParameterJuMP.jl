@@ -288,18 +288,16 @@ end
 
 # constraints
 # ------------------------------------------------------------------------------
-
 include("constraints.jl")
 
 # JuMP variable interface
 # ------------------------------------------------------------------------------
-
 include("variable_interface.jl")
 
 # operators and mutable arithmetics
 # ------------------------------------------------------------------------------
-
 include("operators.jl")
 include("mutable_arithmetics.jl")
+include("print.jl")
 
 end
