@@ -2,6 +2,24 @@
 # ------------------------------------------------------------------------------
 
 #=
+
+Zero and one
+
+=#
+
+# Make zero
+Base.zero(::Type{GAEp{C}}) where {C} = GAEp{C}(zero(C))
+Base.zero(::Type{PAE{C}}) where {C} = PAE{C}(GAEv{C}(zero(C)), zero(GAEp{C}))
+Base.zero(a::GAEp) = zero(typeof(a))
+Base.zero(a::PAE) = zero(typeof(a))
+
+# Make one
+Base.one(::Type{GAEp{C}}) where {C} = GAEp{C}(one(C))
+Base.one(::Type{PAE{C}}) where {C} = PAE{C}(GAEv{C}(one(C)), one(GAEp{C}))
+Base.one(a::GAEp) = one(typeof(a))
+Base.one(a::PAE) = one(typeof(a))
+
+#=
     Number
 =#
 
@@ -36,9 +54,31 @@ Base.:(-)(lhs::Parameter, rhs::JuMP.VariableRef)::ParametrizedAffExpr = PAE{Floa
 Base.:(+)(lhs::Parameter, rhs::Parameter) = PAE{Float64}(GAEv{Float64}(0.0), GAEp{Float64}(0.0, lhs => 1.0, rhs => +1.0))
 Base.:(-)(lhs::Parameter, rhs::Parameter) = PAE{Float64}(GAEv{Float64}(0.0), GAEp{Float64}(0.0, lhs => 1.0, rhs => -1.0))
 
-# Parameter--GAEp
-Base.:(+)(lhs::Parameter, rhs::GAEp{C})::GAEp{C} where {C} = GAEp{C}(vcat(rhs.vars,lhs),vcat(rhs.coeffs,one(C)))
-Base.:(-)(lhs::Parameter, rhs::GAEp{C})::GAEp{C} where {C} = GAEp{C}(vcat(rhs.vars,lhs),vcat(-rhs.coeffs,one(C)))
+# AbstractVariableRef--GenericAffExpr
+function Base.:+(lhs::Parameter, rhs::GAEp{C}) where {C}
+    # For the variables to have the proper order in the result, we need to add the lhs first.
+    result = zero(rhs)
+    result.constant = rhs.constant
+    JuMP.sizehint!(result, length(JuMP.linear_terms(rhs)) + 1)
+    add_to_expression!(result, one(C), lhs)
+    for (coef, var) in JuMP.linear_terms(rhs)
+        JuMP.add_to_expression!(result, coef, var)
+    end
+    return result
+end
+
+function Base.:-(lhs::Parameter, rhs::GAEp{C}) where {C}
+    # For the variables to have the proper order in the result, we need to add the lhs first.
+    result = zero(rhs)
+    result.constant = -rhs.constant
+    JuMP.sizehint!(result, length(JuMP.linear_terms(rhs)) + 1)
+    add_to_expression!(result, one(C), lhs)
+    for (coef, var) in JuMP.linear_terms(rhs)
+        JuMP.add_to_expression!(result, -coef, var)
+    end
+    return result
+end
+
 
 # Parameter--GAEv/GenericAffExpr{C,VariableRef}
 Base.:(+)(lhs::Parameter, rhs::GAEv{C}) where {C} = PAE{C}(copy(rhs),GAEp{C}(zero(C), lhs => 1.))
@@ -106,18 +146,6 @@ Base.:(-)(lhs::GAEp{C}, rhs::PAE{C}) where {C} = PAE{C}(-rhs.v,lhs-rhs.p)
 #=
     ParametrizedAffExpr{C}
 =#
-
-# Make zero
-Base.zero(::Type{GAEp{C}}) where {C} = GAEp{C}(zero(C))
-Base.zero(::Type{PAE{C}}) where {C} = PAE{C}(GAEv{C}(zero(C)), zero(GAEp{C}))
-Base.zero(a::GAEp) = zero(typeof(a))
-Base.zero(a::PAE) = zero(typeof(a))
-
-# Make one
-Base.one(::Type{GAEp{C}}) where {C} = GAEp{C}(one(C))
-Base.one(::Type{PAE{C}}) where {C} = PAE{C}(GAEv{C}(one(C)), one(GAEp{C}))
-Base.one(a::GAEp) = one(typeof(a))
-Base.one(a::PAE) = one(typeof(a))
 
 # Number--PAE
 Base.:(+)(lhs::PAE, rhs::Number) = (+)(rhs,lhs)
