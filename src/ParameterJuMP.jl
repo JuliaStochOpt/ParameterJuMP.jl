@@ -281,6 +281,7 @@ const PAE{C} = ParametrizedAffExpr{C}
 const PAEC{S} = JuMP.ScalarConstraint{PAE{Float64}, S}
 const PVAEC{S} = JuMP.VectorConstraint{PAE{Float64}, S}
 
+Base.iszero(a::PAE) = iszero(a.p) && iszero(a.v)
 
 # Build constraint
 # ------------------------------------------------------------------------------
