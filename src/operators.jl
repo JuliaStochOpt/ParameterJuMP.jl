@@ -54,7 +54,7 @@ Base.:(-)(lhs::Parameter, rhs::JuMP.VariableRef)::ParametrizedAffExpr = PAE{Floa
 Base.:(+)(lhs::Parameter, rhs::Parameter) = PAE{Float64}(GAEv{Float64}(0.0), GAEp{Float64}(0.0, lhs => 1.0, rhs => +1.0))
 Base.:(-)(lhs::Parameter, rhs::Parameter) = PAE{Float64}(GAEv{Float64}(0.0), GAEp{Float64}(0.0, lhs => 1.0, rhs => -1.0))
 
-# AbstractVariableRef--GenericAffExpr
+# Parameter--GAEp
 function Base.:+(lhs::Parameter, rhs::GAEp{C}) where {C}
     # For the variables to have the proper order in the result, we need to add the lhs first.
     result = zero(rhs)
