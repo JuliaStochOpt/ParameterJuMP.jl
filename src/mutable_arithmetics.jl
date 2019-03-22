@@ -80,8 +80,14 @@ end
 function JuMP.add_to_expression!(aff::PAE, new_coef, new_var::JuMP.VariableRef)
     JuMP.add_to_expression!(aff.v, new_coef, new_var)
 end
+function JuMP.add_to_expression!(aff::PAE, new_var::JuMP.VariableRef)
+    JuMP.add_to_expression!(aff.v, new_var)
+end
 function JuMP.add_to_expression!(aff::PAE, new_param::Parameter, new_coef)
     JuMP.add_to_expression!(aff.p, new_coef, new_param)
+end
+function JuMP.add_to_expression!(aff::PAE, new_param::Parameter)
+    JuMP.add_to_expression!(aff.p,new_param)
 end
 function JuMP.add_to_expression!(aff::PAE, new_coef, new_param::Parameter)
     JuMP.add_to_expression!(aff.p, new_coef, new_param)
