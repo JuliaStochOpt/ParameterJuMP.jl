@@ -45,8 +45,8 @@ Base.:(+)(lhs::Parameter, rhs::GAEv{C}) where {C} = PAE{C}(copy(rhs),GAEp{C}(zer
 Base.:(-)(lhs::Parameter, rhs::GAEv{C}) where {C} = PAE{C}(-rhs,GAEp{C}(zero(C), lhs => 1.))
 
 # Parameter--ParametrizedAffExpr{C}
-Base.:(+)(lhs::Parameter, rhs::PAE{C}) where {C} = PAE{C}(copy(rhs.v),JuMP.add_to_expression!(rhs.p,lhs))
-Base.:(-)(lhs::Parameter, rhs::PAE{C}) where {C} = PAE{C}(-rhs.v,JuMP.add_to_expression!(-1*rhs.p,lhs))
+Base.:(+)(lhs::Parameter, rhs::PAE{C}) where {C} = PAE{C}(copy(rhs.v),lhs+rhs.p)
+Base.:(-)(lhs::Parameter, rhs::PAE{C}) where {C} = PAE{C}(-rhs.v,lhs-rhs.p)
 
 #=
     VariableRef
@@ -85,8 +85,8 @@ Base.:(-)(lhs::GAEv{C}, rhs::PAE{C}) where {C} = PAE{C}(lhs-rhs.v,-rhs.p)
 =#
 
 # GenericAffExpr{C,Parameter}--Parameter
-Base.:(+)(lhs::GAEp{C}, rhs::Parameter) where {C} = JuMP.add_to_expression!(lhs,rhs)
-Base.:(-)(lhs::GAEp{C}, rhs::Parameter) where {C} = JuMP.add_to_expression!(lhs,-rhs)
+Base.:(+)(lhs::GAEp{C}, rhs::Parameter) where {C} = JuMP.add_to_expression!(copy(lhs), one(C), rhs)
+Base.:(-)(lhs::GAEp{C}, rhs::Parameter) where {C} = JuMP.add_to_expression!(copy(lhs),-one(C), rhs)
 
 # GenericAffExpr{C,Parameter}--VariableRef
 Base.:(+)(lhs::GAEp{C}, rhs::JuMP.VariableRef) where {C} = (+)(rhs,lhs)
