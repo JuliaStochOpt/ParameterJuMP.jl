@@ -93,8 +93,6 @@ function JuMP.add_to_expression!(aff::PAE, new_coef, new_param::Parameter)
     JuMP.add_to_expression!(aff.p, new_coef, new_param)
 end
 
-
-
 #= 
 
 Convert
@@ -104,11 +102,10 @@ Convert
 Base.convert(::Type{PAE{C}}, aff::GAEv{C}) where {C} = PAE{C}(aff, GAEp{C}(zero(C)))
 Base.convert(::Type{PAE{C}}, aff::GAEp{C}) where {C} = PAE{C}(GAEv{C}(zero(C)), aff)
 
-
 #=
 
 Copy
 
 =#
 
-Base.copy(aff::PAE) = PAE(copy(aff.p), copy(aff.v))
+Base.copy(aff::PAE) = PAE(copy(aff.v), copy(aff.p))
