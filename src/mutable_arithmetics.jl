@@ -102,3 +102,4 @@ Conversions
 =#
 
 Base.convert(::Type{PAE{C}}, aff::GAEv{C}) where {C} = PAE{C}(aff, GAEp{C}(zero(C)))
+Base.convert(::Type{PAE{C}}, aff::GAEp{C}) where {C} = PAE{C}(GAEv{C}(zero(C)), aff)
