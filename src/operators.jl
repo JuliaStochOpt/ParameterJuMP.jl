@@ -110,6 +110,9 @@ Base.:(-)(lhs::GAEp{C}, rhs::PAE{C}) where {C} = PAE{C}(-rhs.v,lhs-rhs.p)
 # Make zero
 Base.zero(::Type{PAE{C}}) where {C} = GAEp{C}(zero(C))
 
+# Make one
+Base.one(::Type{PAE{C}}) where {C} = GAEp{C}(one(C))
+
 # Number--PAE
 Base.:(+)(lhs::PAE, rhs::Number) = (+)(rhs,lhs)
 Base.:(-)(lhs::PAE, rhs::Number) = (-)(-rhs,lhs)
