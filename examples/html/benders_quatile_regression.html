@@ -896,8 +896,8 @@ full_model_regression &#40;generic function with 1 method&#41;
 First coefficients in solution: &#91;3.76377, 0.790012, 0.878022, 0.0563155, 0.
 0876301, 0.314878, 0.00317523, 0.148887, 0.120253, 0.242875&#93;
 Objective value: 42.627682385307324
-Time in solve: 10.853783266
-Time in build: 2.185323159
+Time in solve: 2.525386632
+Time in build: 0.373113029
 </pre>
 
 
@@ -984,7 +984,7 @@ ObsSet &#40;generic function with 1 method&#41;
         </span><span class='hljl-cs'># variables are added to the optimization model, while parameters</span><span class='hljl-t'>
         </span><span class='hljl-cs'># are not. Parameters are merged with LP problem constants and do not</span><span class='hljl-t'>
         </span><span class='hljl-cs'># increase the model dimensions.</span><span class='hljl-t'>
-        </span><span class='hljl-n'>β</span><span class='hljl-t'> </span><span class='hljl-oB'>=</span><span class='hljl-t'> </span><span class='hljl-nf'>Parameters</span><span class='hljl-p'>(</span><span class='hljl-n'>slave</span><span class='hljl-p'>,</span><span class='hljl-t'> </span><span class='hljl-nf'>zeros</span><span class='hljl-p'>(</span><span class='hljl-n'>N_Candidates</span><span class='hljl-p'>))</span><span class='hljl-t'>
+        </span><span class='hljl-n'>β</span><span class='hljl-t'> </span><span class='hljl-oB'>=</span><span class='hljl-t'> </span><span class='hljl-nf'>add_parameters</span><span class='hljl-p'>(</span><span class='hljl-n'>slave</span><span class='hljl-p'>,</span><span class='hljl-t'> </span><span class='hljl-nf'>zeros</span><span class='hljl-p'>(</span><span class='hljl-n'>N_Candidates</span><span class='hljl-p'>))</span><span class='hljl-t'>
     </span><span class='hljl-k'>else</span><span class='hljl-t'>
         </span><span class='hljl-cs'># Create fixed variables</span><span class='hljl-t'>
         </span><span class='hljl-nd'>@variables</span><span class='hljl-p'>(</span><span class='hljl-n'>slave</span><span class='hljl-p'>,</span><span class='hljl-t'> </span><span class='hljl-k'>begin</span><span class='hljl-t'>
@@ -1333,30 +1333,30 @@ Converged&#33;
 First coefficients in solution: &#91;3.76754, 0.790079, 0.877002, 0.0552698, 0.
 0869099, 0.314411, 0.00889972, 0.152491, 0.118625, 0.23782&#93;
 Objective value: 41.97883975859214
-Time in loop: 1.173810276
-Time in init: 4.767122531
+Time in loop: 4.018495623
+Time in init: 6.44946216
  ─────────────────────────────────────────────────────────────────────────
                                   Time                   Allocations      
                           ──────────────────────   ───────────────────────
-     Tot / &#37; measured:         6.75s / 88.0&#37;            758MiB / 97.1&#37;    
+     Tot / &#37; measured:         12.0s / 87.0&#37;            771MiB / 97.4&#37;    
 
  Section          ncalls     time   &#37;tot     avg     alloc   &#37;tot      avg
  ─────────────────────────────────────────────────────────────────────────
- Init                  1    4.77s  80.2&#37;   4.77s    621MiB  84.3&#37;   621MiB
-   Cuts                1    4.09s  68.8&#37;   4.09s    530MiB  72.0&#37;   530MiB
-     opt             100    2.07s  34.9&#37;  20.7ms    264MiB  35.9&#37;  2.64MiB
-     dual            100    312ms  5.25&#37;  3.12ms   26.8MiB  3.64&#37;   274KiB
-     fix             100   97.3ms  1.64&#37;   973μs   4.13MiB  0.56&#37;  42.3KiB
-   Slaves              1    610ms  10.3&#37;   610ms   79.0MiB  10.7&#37;  79.0MiB
-   Master              1    296μs  0.00&#37;   296μs    147KiB  0.02&#37;   147KiB
-   Sol                 1    855ns  0.00&#37;   855ns      928B  0.00&#37;     928B
- Loop                  1    1.17s  19.8&#37;   1.17s    116MiB  15.7&#37;   116MiB
-   solve master        7    462ms  7.77&#37;  65.9ms   1.36MiB  0.18&#37;   199KiB
-   solve nodes         7    442ms  7.44&#37;  63.1ms   85.0MiB  11.5&#37;  12.1MiB
-     fix             700    214ms  3.59&#37;   305μs   64.6MiB  8.77&#37;  94.5KiB
-     opt             700    112ms  1.89&#37;   161μs    153KiB  0.02&#37;     224B
-     dual            700    108ms  1.82&#37;   154μs   20.0MiB  2.71&#37;  29.3KiB
-   add cuts            7    219ms  3.68&#37;  31.3ms   27.8MiB  3.77&#37;  3.97MiB
+ Init                  1    6.45s  61.6&#37;   6.45s    636MiB  84.7&#37;   636MiB
+   Cuts                1    4.89s  46.8&#37;   4.89s    555MiB  73.9&#37;   555MiB
+     opt             100    2.30s  22.0&#37;  23.0ms    265MiB  35.2&#37;  2.65MiB
+     dual            100    380ms  3.63&#37;  3.80ms   26.2MiB  3.48&#37;   268KiB
+     fix             100   44.5ms  0.42&#37;   445μs   3.34MiB  0.45&#37;  34.2KiB
+   Slaves              1    528ms  5.05&#37;   528ms   69.5MiB  9.26&#37;  69.5MiB
+   Master              1    290μs  0.00&#37;   290μs    147KiB  0.02&#37;   147KiB
+   Sol                 1   7.27μs  0.00&#37;  7.27μs      928B  0.00&#37;     928B
+ Loop                  1    4.02s  38.4&#37;   4.02s    115MiB  15.3&#37;   115MiB
+   solve nodes         7    478ms  4.57&#37;  68.3ms   83.9MiB  11.2&#37;  12.0MiB
+     fix             700    228ms  2.18&#37;   326μs   63.6MiB  8.47&#37;  93.0KiB
+     dual            700    123ms  1.18&#37;   176μs   20.0MiB  2.66&#37;  29.3KiB
+     opt             700    118ms  1.13&#37;   169μs    153KiB  0.02&#37;     224B
+   solve master        7    415ms  3.96&#37;  59.3ms   1.36MiB  0.18&#37;   199KiB
+   add cuts            7    363ms  3.47&#37;  51.9ms   28.0MiB  3.72&#37;  3.99MiB
  ─────────────────────────────────────────────────────────────────────────
 </pre>
 
@@ -1377,41 +1377,41 @@ Build initial solution
 Build slave problems
 Build initial cuts
 Initialize Iterative step
-Iter &#61; 1, LB &#61; 0.0, UB &#61; 243.75840787492817
-Iter &#61; 2, LB &#61; 3.776535560004161e-14, UB &#61; 243.75840787492817
-Iter &#61; 3, LB &#61; 5.38703942212852, UB &#61; 243.75840787492817
-Iter &#61; 4, LB &#61; 23.45056569284757, UB &#61; 57.996041863123985
-Iter &#61; 5, LB &#61; 33.356592505784526, UB &#61; 49.12208051557272
-Iter &#61; 6, LB &#61; 40.13581171938589, UB &#61; 46.13064724725085
-Iter &#61; 7, LB &#61; 41.97883975858674, UB &#61; 43.667514630132594
+Iter &#61; 1, LB &#61; 0.0, UB &#61; 243.75840787492905
+Iter &#61; 2, LB &#61; 6.882304672892165e-13, UB &#61; 243.75840787492905
+Iter &#61; 3, LB &#61; 5.387039422129757, UB &#61; 243.75840787492905
+Iter &#61; 4, LB &#61; 23.450565692849306, UB &#61; 57.99604186314772
+Iter &#61; 5, LB &#61; 33.35659250578788, UB &#61; 49.122080515593424
+Iter &#61; 6, LB &#61; 40.135811719367595, UB &#61; 46.130647247335276
+Iter &#61; 7, LB &#61; 41.97883975859797, UB &#61; 43.66751463015694
 Converged&#33;
 First coefficients in solution: &#91;3.76754, 0.790079, 0.877002, 0.0552698, 0.
 0869099, 0.314411, 0.00889972, 0.152491, 0.118625, 0.23782&#93;
-Objective value: 41.97883975858674
-Time in loop: 0.66281678
-Time in init: 1.524861044
+Objective value: 41.97883975859797
+Time in loop: 2.349309788
+Time in init: 2.266450046
  ─────────────────────────────────────────────────────────────────────────
                                   Time                   Allocations      
                           ──────────────────────   ───────────────────────
-     Tot / &#37; measured:         2.19s / 100&#37;             183MiB / 100&#37;     
+     Tot / &#37; measured:         5.72s / 80.7&#37;            105MiB / 100&#37;     
 
  Section          ncalls     time   &#37;tot     avg     alloc   &#37;tot      avg
  ─────────────────────────────────────────────────────────────────────────
- Init                  1    1.52s  69.7&#37;   1.52s    157MiB  86.1&#37;   157MiB
-   Cuts                1    956ms  43.7&#37;   956ms   95.7MiB  52.3&#37;  95.7MiB
-     opt             100    456ms  20.9&#37;  4.56ms   45.8MiB  25.1&#37;   469KiB
-     dual            100    130ms  5.95&#37;  1.30ms   14.6MiB  7.99&#37;   150KiB
-     fix             100    430μs  0.02&#37;  4.30μs   7.81KiB  0.00&#37;    80.0B
-   Slaves              1    568ms  26.0&#37;   568ms   61.5MiB  33.6&#37;  61.5MiB
-   Master              1    275μs  0.01&#37;   275μs    147KiB  0.08&#37;   147KiB
+ Loop                  1    2.35s  50.9&#37;   2.35s   23.9MiB  22.8&#37;  23.9MiB
+   solve master        7    403ms  8.74&#37;  57.6ms   1.36MiB  1.30&#37;   199KiB
+   solve nodes         7    172ms  3.73&#37;  24.6ms   8.40MiB  8.01&#37;  1.20MiB
+     opt             700    155ms  3.36&#37;   222μs   7.08MiB  6.75&#37;  10.4KiB
+     dual            700   6.57ms  0.14&#37;  9.38μs   1.09MiB  1.04&#37;  1.59KiB
+     fix             700   3.13ms  0.07&#37;  4.47μs   54.7KiB  0.05&#37;    80.0B
+   add cuts            7   60.3ms  1.31&#37;  8.62ms   14.1MiB  13.4&#37;  2.01MiB
+ Init                  1    2.27s  49.1&#37;   2.27s   80.9MiB  77.2&#37;  80.9MiB
+   Cuts                1    469ms  10.2&#37;   469ms   32.4MiB  30.9&#37;  32.4MiB
+     opt             100   70.0ms  1.52&#37;   700μs   10.4MiB  10.0&#37;   107KiB
+     dual            100   1.63ms  0.04&#37;  16.3μs    159KiB  0.15&#37;  1.59KiB
+     fix             100    523μs  0.01&#37;  5.23μs   7.81KiB  0.01&#37;    80.0B
+   Slaves              1    391ms  8.47&#37;   391ms   48.3MiB  46.1&#37;  48.3MiB
+   Master              1    303μs  0.01&#37;   303μs    147KiB  0.14&#37;   147KiB
    Sol                 1    856ns  0.00&#37;   856ns      928B  0.00&#37;     928B
- Loop                  1    663ms  30.3&#37;   663ms   25.5MiB  13.9&#37;  25.5MiB
-   solve master        7    400ms  18.3&#37;  57.1ms   1.36MiB  0.74&#37;   199KiB
-   solve nodes         7    204ms  9.31&#37;  29.1ms   10.0MiB  5.48&#37;  1.43MiB
-     opt             700    187ms  8.54&#37;   267μs   8.70MiB  4.76&#37;  12.7KiB
-     dual            700   5.76ms  0.26&#37;  8.24μs   1.09MiB  0.60&#37;  1.59KiB
-     fix             700   3.01ms  0.14&#37;  4.30μs   54.7KiB  0.03&#37;    80.0B
-   add cuts            7   53.5ms  2.45&#37;  7.64ms   14.1MiB  7.70&#37;  2.01MiB
  ─────────────────────────────────────────────────────────────────────────
 </pre>
 
@@ -1443,7 +1443,7 @@ Time in init: 1.524861044
           <div class="footer"><p>
           Published from <a href="benders_quatile_regression.jl">benders_quatile_regression.jl</a> using
           <a href="http://github.com/mpastell/Weave.jl">Weave.jl</a>
-           on 2019-03-20.
+           on 2019-03-23.
           <p></div>
 
 

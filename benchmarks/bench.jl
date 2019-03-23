@@ -10,7 +10,7 @@ using ProfileView
 function bench1_p(N::Int, M::Int)
     m_slave = ModelWithParams(with_optimizer(GLPK.Optimizer))
 
-    x = Parameters(m_slave, 4.0*ones(M))
+    x = add_parameters(m_slave, 4.0*ones(M))
     @variable(m_slave, y[1:N])
     for i in 1:100
         @constraint(m_slave, sum(3.0*y[i] for i in 1:N) >= 2.0 - sum(7.0*x[i] for i in 1:M))
@@ -34,7 +34,7 @@ end
 function bench2_p(N::Int)
     m_slave = ModelWithParams(with_optimizer(GLPK.Optimizer))
 
-    x = Parameters(m_slave, 4.0*ones(N))
+    x = add_parameters(m_slave, 4.0*ones(N))
     @variable(m_slave, y[1:N])
     for i in 1:100
         @constraint(m_slave, sum(3.0*y[i] + 3.0 + 7.0*x[i] for i in 1:N) >= 2.0)

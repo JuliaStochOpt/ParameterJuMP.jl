@@ -3,7 +3,7 @@
 
 const GAE{C,V} = JuMP.GenericAffExpr{C,V}
 const GAEv{C} = JuMP.GenericAffExpr{C,JuMP.VariableRef}
-const GAEp{C} = JuMP.GenericAffExpr{C,Parameter}
+const GAEp{C} = JuMP.GenericAffExpr{C,ParameterRef}
 
 mutable struct DoubleGenericAffExpr{C,V,P} <: JuMP.AbstractJuMPScalar
     v::JuMP.GenericAffExpr{C,V}
@@ -214,7 +214,7 @@ end
 # Duals
 # ------------------------------------------------------------------------------
 
-function JuMP.dual(p::Parameter)
+function JuMP.dual(p::ParameterRef)
     params = _getparamdata(p)::ParameterData
     if lazy_duals(params)
         return _getdual(p)
@@ -225,7 +225,7 @@ end
 
 # lazy
 
-function _getdual(p::Parameter)
+function _getdual(p::ParameterRef)
     return _getdual(p.model, index(p))
 end
 function _getdual(pcr::ParametrizedConstraintRef)::Float64
@@ -272,7 +272,7 @@ end
 # constraint modification
 # ------------------------------------------------------------------------------
 
-function JuMP.set_coefficient(con::CtrRef{F, S}, p::Parameter, coef::Number) where {F<:SAF, S}
+function JuMP.set_coefficient(con::CtrRef{F, S}, p::ParameterRef, coef::Number) where {F<:SAF, S}
     data = _getparamdata(p)
     dict = _get_param_dict(data, S)
     old_coef = 0.0
@@ -317,11 +317,11 @@ function JuMP.set_coefficient(con::CtrRef{F, S}, p::Parameter, coef::Number) whe
 end
 
 """
-    delete_from_constraint(con, param::Parameter)
+    delete_from_constraint(con, param::ParameterRef)
 
 Removes parameter `param` from constraint `con`.
 """
-function delete_from_constraint(con::CtrRef{F, S}, p::Parameter) where {F, S}
+function delete_from_constraint(con::CtrRef{F, S}, p::ParameterRef) where {F, S}
     data = _getparamdata(p)
     dict = _get_param_dict(data, S)
     ind = index(data, p)
@@ -350,11 +350,11 @@ function delete_from_constraint(con::CtrRef{F, S}, p::Parameter) where {F, S}
 end
 
 """
-    delete_from_constraints(param::Parameter)
+    delete_from_constraints(param::ParameterRef)
 
 Removes parameter `param` from all constraints.
 """
-function delete_from_constraints(::Type{S}, p::Parameter) where S
+function delete_from_constraints(::Type{S}, p::ParameterRef) where S
     data = _getparamdata(p)
     dict = _get_param_dict(data, S)
     ind = index(data, p)
@@ -379,7 +379,7 @@ function delete_from_constraints(::Type{S}, p::Parameter) where S
     nothing
 end
 
-function delete_from_constraints(param::Parameter)
+function delete_from_constraints(param::ParameterRef)
     delete_from_constraints(EQ, param)
     delete_from_constraints(LE, param)
     delete_from_constraints(GE, param)
