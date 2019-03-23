@@ -344,3 +344,80 @@ function test13(args...)
         @test_throws ErrorException ParameterJuMP.set_no_duals(model_2)
     end
 end
+
+using SparseArrays
+
+macro test_expression(expr)
+    esc(quote
+            @test JuMP.isequal_canonical(@expression(m, $expr), $expr)
+    end)
+end
+
+macro test_expression_with_string(expr, str)
+    esc(quote
+            @test string(@inferred $expr) == $str
+            @test_expression $expr
+    end)
+end
+
+function test14(args...)
+    @testset "Test ParametrizedAffExpr" begin
+        m = ModelWithParams()
+        @variable(m, x)
+        @variable(m, y)
+        a = Parameter(m)
+        @test name(a) == ""
+        set_name(a, "a")
+        @test name(a) == "a"
+        b = Parameter(m)
+        set_name(b, "b")
+
+        exp1 = x + y + a
+        @test typeof(exp1) == ParameterJuMP.ParametrizedAffExpr{Float64}
+        @test length(exp1.v.terms) == 2
+        exp1 = exp1 + y
+        @test length(exp1.v.terms) == 2
+
+        @test iszero(ParameterJuMP.ParametrizedAffExpr{Float64}())
+        @test iszero(zero(exp1))
+        @test iszero(one(exp1) - one(ParameterJuMP.ParametrizedAffExpr{Float64}))
+        @test iszero(SparseArrays.dropzeros((exp1 - copy(exp1))))
+
+        empty_func(empty_arg) = 0
+        exp2 = map_coefficients(Base.zero, exp1)
+        @test iszero(SparseArrays.dropzeros(exp2))
+        @test iszero(constant(exp2))
+
+        @test isequal_canonical(exp1, copy(exp1))
+
+        exp4 = exp1 - copy(exp1)
+        @test iszero(SparseArrays.dropzeros(exp4))
+
+        # var + num
+        @test_expression_with_string 7.1 * x + 2.5 "7.1 x + 2.5"
+        @test_expression_with_string 1.2 * y + 1.2 "1.2 y + 1.2"
+        # par + num
+        @test_expression_with_string 7.1 * a + 2.5 "7.1 a + 2.5"
+        @test_expression_with_string 1.2 * b + 1.2 "1.2 b + 1.2"
+
+        # par + par + num
+        @test_expression_with_string b + a + 1.2 "b + a + 1.2"
+        # par - par + num
+        @test_expression_with_string b - a + 1.2 "b - a + 1.2"
+        # par - (par - num)
+        @test_expression_with_string b - (a - 1.2) "b - a + 1.2"
+        # par - par - num
+        @test_expression_with_string b - a - 1.2 "b - a - 1.2"
+        # var + par + num
+        @test_expression_with_string x + a + 1.2 "x + a + 1.2"
+        # var + var + par + num
+        @test_expression_with_string x + y + a + 1.2 "x + y + a + 1.2"
+        # var + var - par + num
+        @test_expression_with_string x + y - a + 1.2 "x + y - a + 1.2"
+        # var + var - par + par + num
+        @test_expression_with_string x + y - a + b + 1.2 "x + y + b - a + 1.2"
+        # par + par - var + var + num
+        @test_expression_with_string a + b - x + y + 1.2 "y - x + a + b + 1.2"
+
+    end
+end

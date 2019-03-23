@@ -5,6 +5,7 @@ const MOI = MathOptInterface
 const MOIU = MOI.Utilities
 
 using JuMP
+using SparseArrays
 
 export
 ModelWithParams, Parameter, Parameters
@@ -16,7 +17,6 @@ struct Parameter <: JuMP.AbstractJuMPScalar
     ind::Int64 # local reference
     model::JuMP.Model
 end
-JuMP.function_string(mode, ::Parameter) = "_param_"
 
 # Reference to a constraint in which the parameter has coefficient coef
 struct ParametrizedConstraintRef{C}
@@ -47,6 +47,8 @@ mutable struct ParameterData
     parameters_map_saf_in_le::Dict{CtrRef{SAF, LE}, JuMP.GenericAffExpr{Float64,Parameter}}
     parameters_map_saf_in_ge::Dict{CtrRef{SAF, GE}, JuMP.GenericAffExpr{Float64,Parameter}}
 
+    names::Dict{Parameter, String}
+
     # overload addvariable
     # variables_map::Dict{Int64, Vector{Int64}}
     # variables_map_lb::Dict{Int64, Vector{Int64}}
@@ -68,6 +70,7 @@ mutable struct ParameterData
             Dict{CtrRef{SAF, EQ}, JuMP.GenericAffExpr{Float64,Parameter}}(),
             Dict{CtrRef{SAF, LE}, JuMP.GenericAffExpr{Float64,Parameter}}(),
             Dict{CtrRef{SAF, GE}, JuMP.GenericAffExpr{Float64,Parameter}}(),
+            Dict{Parameter, String}(),
             # false,
             false,
             false,

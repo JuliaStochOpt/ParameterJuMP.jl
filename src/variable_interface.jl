@@ -76,6 +76,7 @@ function JuMP.delete(model::Model, param::Parameter)
     end
     # create dictionary map
     # turn flag has_deleted
+    # delete names ?
 end
 
 """
@@ -97,17 +98,32 @@ function Base.isequal(p1::Parameter, p2::Parameter)
     return owner_model(p1) === owner_model(p2) && p1.ind == p2.ind
 end
 
-"""
-    index(p::Parameter)::Int
-
-Return the internal index of the parameter `p`.
-"""
 index(p::Parameter) = v.ind
 
-# TODO
-# name
-# set_name
-# variable_by_name
+function JuMP.name(p::Parameter)
+    dict = _getparamdata(p).names
+    if haskey(dict, p)
+        return dict[p]
+    else
+        return ""
+    end
+end
+
+function JuMP.set_name(p::Parameter, s::String)
+    dict = _getparamdata(p).names
+    dict[p] = s
+end
+
+function parameter_by_name(model::Model, name::String)
+    # can be improved with a lazy rev_names map
+    dict = _getparamdata(model).names
+    for (par, n) in dict
+        if n == name
+            return par
+        end
+    end
+    return nothing
+end
 
 JuMP.has_lower_bound(p::Parameter) = false
 JuMP.LowerBoundRef(p::Parameter) =
