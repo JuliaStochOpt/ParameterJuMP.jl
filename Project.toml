@@ -1,0 +1,15 @@
+name = "ParameterJuMP"
+uuid = "774612a8-9878-5177-865a-ca53ae2495f9"
+version = "0.0.1"
+
+[deps]
+JuMP = "4076af6c-e467-56ae-b986-b466b2749572"
+MathOptInterface = "b8f27783-ece8-5eb3-8dc8-9495eed66fee"
+SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
+
+[extras]
+GLPK = "60bf3e95-4087-53dc-ae20-288a0d20c6a6"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test", "GLPK"]

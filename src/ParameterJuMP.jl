@@ -1,13 +1,14 @@
 module ParameterJuMP
 
+using SparseArrays
+
+using JuMP
 using MathOptInterface
 const MOI = MathOptInterface
 const MOIU = MOI.Utilities
 
-using JuMP
-
 export
-ModelWithParams, Parameter, Parameters, setvalue!, fix
+ModelWithParams, Parameter, Parameters
 
 # types
 # ------------------------------------------------------------------------------
@@ -16,7 +17,6 @@ struct Parameter <: JuMP.AbstractJuMPScalar
     ind::Int64 # local reference
     model::JuMP.Model
 end
-JuMP.function_string(mode, ::Parameter) = "_param_"
 
 # Reference to a constraint in which the parameter has coefficient coef
 struct ParametrizedConstraintRef{C}
@@ -47,6 +47,8 @@ mutable struct ParameterData
     parameters_map_saf_in_le::Dict{CtrRef{SAF, LE}, JuMP.GenericAffExpr{Float64,Parameter}}
     parameters_map_saf_in_ge::Dict{CtrRef{SAF, GE}, JuMP.GenericAffExpr{Float64,Parameter}}
 
+    names::Dict{Parameter, String}
+
     # overload addvariable
     # variables_map::Dict{Int64, Vector{Int64}}
     # variables_map_lb::Dict{Int64, Vector{Int64}}
@@ -59,6 +61,8 @@ mutable struct ParameterData
 
 
     lazy::Bool
+
+    no_duals::Bool
     dual_values::Vector{Float64}
     function ParameterData()
         new(Int64[],
@@ -70,9 +74,11 @@ mutable struct ParameterData
             Dict{CtrRef{SAF, EQ}, JuMP.GenericAffExpr{Float64,Parameter}}(),
             Dict{CtrRef{SAF, LE}, JuMP.GenericAffExpr{Float64,Parameter}}(),
             Dict{CtrRef{SAF, GE}, JuMP.GenericAffExpr{Float64,Parameter}}(),
+            Dict{Parameter, String}(),
             # false,
             false,
             Dict{Int64, Int64}(),
+            false,
             false,
             Float64[],
             )
@@ -91,6 +97,20 @@ function index(data::ParameterData, p::Parameter)::Int64
         return data.index_map[p.ind]
     else
         return p.ind
+    end
+end
+
+no_duals(data::ParameterData) = data.no_duals
+no_duals(model::JuMP.Model) = no_duals(_getparamdata(model))
+
+set_no_duals(model::JuMP.Model) = set_no_duals(_getparamdata(model))
+function set_no_duals(data::ParameterData)
+    if isempty(data.current_values)
+        data.no_duals = true
+    elseif no_duals(data)
+        @warn "No duals mode is already activated"
+    else
+        error("Parameter JuMP's no duals mode can only be activated in empty models.")
     end
 end
 
@@ -266,7 +286,7 @@ function parameter_optimizehook(m::JuMP.Model; kwargs...)
     ret = JuMP.optimize!(m::JuMP.Model, ignore_optimize_hook = true, kwargs...)
 
     # update duals for later query
-    if JuMP.has_duals(m)
+    if !no_duals(data) && JuMP.has_duals(m)
         _update_duals(data)
     end
     return ret
@@ -292,18 +312,16 @@ end
 
 # constraints
 # ------------------------------------------------------------------------------
-
 include("constraints.jl")
 
 # JuMP variable interface
 # ------------------------------------------------------------------------------
-
 include("variable_interface.jl")
 
 # operators and mutable arithmetics
 # ------------------------------------------------------------------------------
-
 include("operators.jl")
 include("mutable_arithmetics.jl")
+include("print.jl")
 
 end

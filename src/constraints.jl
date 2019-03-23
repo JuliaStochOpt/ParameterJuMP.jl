@@ -10,12 +10,114 @@ mutable struct ParametrizedAffExpr{C} <: JuMP.AbstractJuMPScalar
     p::JuMP.GenericAffExpr{C,Parameter}
 end
 
-Base.broadcastable(expr::ParametrizedAffExpr) = Ref(expr)
-# JuMP.GenericAffExpr{C,Parameter}(params::Vector{Parameter},coefs::Vector{C}) = JuMP.GenericAffExpr{C}(params,coefs,C(0.0))
-
 const PAE{C} = ParametrizedAffExpr{C}
 const PAEC{S} = JuMP.ScalarConstraint{PAE{Float64}, S}
 const PVAEC{S} = JuMP.VectorConstraint{PAE{Float64}, S}
+
+Base.iszero(a::ParametrizedAffExpr) = iszero(a.v) && iszero(a.p)
+Base.zero(::Type{ParametrizedAffExpr{C}}) where {C} = PAE{C}(zero(GAEv{C}), zero(GAEp{C}))
+Base.one(::Type{ParametrizedAffExpr{C}}) where {C} = PAE{C}(one(GAEv{C}), zero(GAEp{C}))
+Base.zero(a::ParametrizedAffExpr) = zero(typeof(a))
+Base.one( a::ParametrizedAffExpr) =  one(typeof(a))
+Base.copy(a::ParametrizedAffExpr{C}) where C = PAE{C}(copy(a.v), copy(a.p))
+Base.broadcastable(expr::ParametrizedAffExpr) = Ref(expr)
+# JuMP.GenericAffExpr{C,Parameter}(params::Vector{Parameter},coefs::Vector{C}) = JuMP.GenericAffExpr{C}(params,coefs,C(0.0))
+
+ParametrizedAffExpr{C}() where {C} = zero(ParametrizedAffExpr{C})
+
+function JuMP.map_coefficients_inplace!(f::Function, a::ParametrizedAffExpr)
+    map_coefficients_inplace!(f, a.v)
+    # The iterator remains valid if existing elements are updated.
+    for (coef, par) in linear_terms(a.p)
+        a.p.terms[par] = f(coef)
+    end
+    return a
+end
+
+function JuMP.map_coefficients(f::Function, a::ParametrizedAffExpr)
+    return JuMP.map_coefficients_inplace!(f, copy(a))
+end
+
+function Base.sizehint!(a::ParametrizedAffExpr, n::Int, m::Int)
+    sizehint!(a.v.terms, n)
+    sizehint!(a.p.terms, m)
+end
+
+function JuMP.value(ex::ParametrizedAffExpr{T}, var_value::Function) where {T}
+    ret = value(ex.v, var_value)
+    for (param, coef) in ex.p.terms
+        ret += coef * var_value(param)
+    end
+    ret
+end
+
+JuMP.constant(aff::ParametrizedAffExpr) = aff.v.constant
+
+# iterator
+
+# add to expression
+
+function Base.isequal(aff::ParametrizedAffExpr{C},
+    other::ParametrizedAffExpr{C}) where {C}
+    return isequal(aff.v, other.v) &&
+isequal(aff.p, other.p)
+end
+
+Base.hash(aff::ParametrizedAffExpr, h::UInt) = hash(aff.v.constant, hash(aff.v.terms, h), hash(aff.p.terms, h))
+
+function SparseArrays.dropzeros(aff::ParametrizedAffExpr{C}) where C
+    v = SparseArrays.dropzeros(aff.v)
+    p = SparseArrays.dropzeros(aff.p)
+    return PAE{C}(v,p)
+end
+
+# Check if two AffExprs are equal after dropping zeros and disregarding the
+# order. Mostly useful for testing.
+function JuMP.isequal_canonical(aff::ParametrizedAffExpr{C}, other::ParametrizedAffExpr{C}) where {C}
+    aff_nozeros = dropzeros(aff)
+    other_nozeros = dropzeros(other)
+    # Note: This depends on equality of OrderedDicts ignoring order.
+    # This is the current behavior, but it seems questionable.
+    return isequal(aff_nozeros, other_nozeros)
+end
+
+Base.convert(::Type{ParametrizedAffExpr{C}}, v::JuMP.VariableRef) where {C} = PAE{C}(GAEv{C}(zero(C), v => one(C)), zero(GAEp{C}))
+Base.convert(::Type{ParametrizedAffExpr{C}}, v::Real) where {C} = PAE{C}(GAEv{C}(convert(C, v)), zero(GAEp{C}))
+
+# Check all coefficients are finite, i.e. not NaN, not Inf, not -Inf
+function JuMP._assert_isfinite(a::ParametrizedAffExpr)
+    _assert_isfinite(v)
+    for (coef, par) in linear_terms(a.p)
+        isfinite(coef) || error("Invalid coefficient $coef on parameter $par.")
+    end
+end
+
+JuMP.value(a::ParametrizedAffExpr) = JuMP.value(a, value)
+
+function JuMP.check_belongs_to_model(a::ParametrizedAffExpr, model::AbstractModel)
+    JuMP.check_belongs_to_model(a.v, model)
+    JuMP.check_belongs_to_model(a.p, model)
+end
+
+# Note: No validation is performed that the variables in the AffExpr belong to
+# the same model. The verification is done in `check_belongs_to_model` which
+# should be called before calling `MOI.ScalarAffineFunction`.
+# function MOI.ScalarAffineFunction(a::AffExpr)
+#     _assert_isfinite(a)
+#     terms = MOI.ScalarAffineTerm{Float64}[MOI.ScalarAffineTerm(t[1],
+#                                                                index(t[2]))
+#                                           for t in linear_terms(a)]
+#     return MOI.ScalarAffineFunction(terms, a.constant)
+# end
+# moi_function(a::GenericAffExpr) = MOI.ScalarAffineFunction(a)
+# function moi_function_type(::Type{<:GenericAffExpr{T}}) where T
+#     return MOI.ScalarAffineFunction{T}
+# end
+
+
+# Copy an affine expression to a new model by converting all the
+# variables to the new model's variables
+# TODO function Base.copy(a::GenericAffExpr, new_model::AbstractModel)
 
 
 # Build constraint
