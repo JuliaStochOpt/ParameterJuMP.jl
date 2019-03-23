@@ -1,11 +1,11 @@
 module ParameterJuMP
 
+using SparseArrays
+
+using JuMP
 using MathOptInterface
 const MOI = MathOptInterface
 const MOIU = MOI.Utilities
-
-using JuMP
-using SparseArrays
 
 export
 ModelWithParams, Parameter, Parameters
