@@ -25,6 +25,8 @@ Base.broadcastable(expr::ParametrizedAffExpr) = Ref(expr)
 
 ParametrizedAffExpr{C}() where {C} = zero(ParametrizedAffExpr{C})
 
+Base.convert(::Type{PAE{C}}, aff::GAEv{C}) where {C} = PAE{C}(aff, GAEp{C}(zero(C)))
+
 function JuMP.map_coefficients_inplace!(f::Function, a::ParametrizedAffExpr)
     map_coefficients_inplace!(f, a.v)
     # The iterator remains valid if existing elements are updated.

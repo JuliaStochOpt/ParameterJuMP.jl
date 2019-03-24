@@ -419,5 +419,9 @@ function test14(args...)
         # par + par - var + var + num
         @test_expression_with_string a + b - x + y + 1.2 "y - x + a + b + 1.2"
 
+        exp5 = x + y
+        @test_expression_with_string x + y "x + y"
+        @test_expression_with_string convert(ParameterJuMP.ParametrizedAffExpr{Float64}, exp5) "x + y"
+
     end
 end
