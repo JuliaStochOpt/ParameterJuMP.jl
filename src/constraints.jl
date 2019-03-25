@@ -5,29 +5,34 @@ const GAE{C,V} = JuMP.GenericAffExpr{C,V}
 const GAEv{C} = JuMP.GenericAffExpr{C,JuMP.VariableRef}
 const GAEp{C} = JuMP.GenericAffExpr{C,Parameter}
 
-mutable struct ParametrizedAffExpr{C} <: JuMP.AbstractJuMPScalar
-    v::JuMP.GenericAffExpr{C,JuMP.VariableRef}
-    p::JuMP.GenericAffExpr{C,Parameter}
+mutable struct DoubleGenericAffExpr{C,V,P} <: JuMP.AbstractJuMPScalar
+    v::JuMP.GenericAffExpr{C,V}
+    p::JuMP.GenericAffExpr{C,P}
 end
+const DGAE{C,V,P} = DoubleGenericAffExpr{C,V,P}
 
+const ParametrizedGenericAffExpr{C,V} = DoubleGenericAffExpr{C, V, Parameter}
+const PGAE{C,V} = ParametrizedGenericAffExpr{C,V}
+
+const ParametrizedAffExpr{C} = DoubleGenericAffExpr{C, JuMP.VariableRef, Parameter}
 const PAE{C} = ParametrizedAffExpr{C}
 const PAEC{S} = JuMP.ScalarConstraint{PAE{Float64}, S}
 const PVAEC{S} = JuMP.VectorConstraint{PAE{Float64}, S}
 
-Base.iszero(a::ParametrizedAffExpr) = iszero(a.v) && iszero(a.p)
-Base.zero(::Type{ParametrizedAffExpr{C}}) where {C} = PAE{C}(zero(GAEv{C}), zero(GAEp{C}))
-Base.one(::Type{ParametrizedAffExpr{C}}) where {C} = PAE{C}(one(GAEv{C}), zero(GAEp{C}))
-Base.zero(a::ParametrizedAffExpr) = zero(typeof(a))
-Base.one( a::ParametrizedAffExpr) =  one(typeof(a))
-Base.copy(a::ParametrizedAffExpr{C}) where C = PAE{C}(copy(a.v), copy(a.p))
-Base.broadcastable(expr::ParametrizedAffExpr) = Ref(expr)
+Base.iszero(a::PAE) = iszero(a.v) && iszero(a.p)
+Base.zero(::Type{DGAE{C,V,P}}) where {C,V,P} = DGAE{C,V,P}(zero(GAEv{C}), zero(GAEp{C}))
+Base.one(::Type{DGAE{C,V,P}}) where {C,V,P} = DGAE{C,V,P}(one(GAEv{C}), zero(GAEp{C}))
+Base.zero(a::PAE) = zero(typeof(a))
+Base.one( a::PAE) =  one(typeof(a))
+Base.copy(a::DGAE{C,V,P}) where {C,V,P}  = DGAE{C,V,P}(copy(a.v), copy(a.p))
+Base.broadcastable(expr::PAE) = Ref(expr)
 # JuMP.GenericAffExpr{C,Parameter}(params::Vector{Parameter},coefs::Vector{C}) = JuMP.GenericAffExpr{C}(params,coefs,C(0.0))
 
-ParametrizedAffExpr{C}() where {C} = zero(ParametrizedAffExpr{C})
+DGAE{C,V,P}() where {C,V,P} = zero(DGAE{C,V,P})
 
 Base.convert(::Type{PAE{C}}, aff::GAEv{C}) where {C} = PAE{C}(aff, GAEp{C}(zero(C)))
 
-function JuMP.map_coefficients_inplace!(f::Function, a::ParametrizedAffExpr)
+function JuMP.map_coefficients_inplace!(f::Function, a::PAE)
     map_coefficients_inplace!(f, a.v)
     # The iterator remains valid if existing elements are updated.
     for (coef, par) in linear_terms(a.p)
@@ -36,16 +41,16 @@ function JuMP.map_coefficients_inplace!(f::Function, a::ParametrizedAffExpr)
     return a
 end
 
-function JuMP.map_coefficients(f::Function, a::ParametrizedAffExpr)
+function JuMP.map_coefficients(f::Function, a::PAE)
     return JuMP.map_coefficients_inplace!(f, copy(a))
 end
 
-function Base.sizehint!(a::ParametrizedAffExpr, n::Int, m::Int)
+function Base.sizehint!(a::PAE, n::Int, m::Int)
     sizehint!(a.v.terms, n)
     sizehint!(a.p.terms, m)
 end
 
-function JuMP.value(ex::ParametrizedAffExpr{T}, var_value::Function) where {T}
+function JuMP.value(ex::PAE{T}, var_value::Function) where {T}
     ret = value(ex.v, var_value)
     for (param, coef) in ex.p.terms
         ret += coef * var_value(param)
@@ -53,29 +58,27 @@ function JuMP.value(ex::ParametrizedAffExpr{T}, var_value::Function) where {T}
     ret
 end
 
-JuMP.constant(aff::ParametrizedAffExpr) = aff.v.constant
+JuMP.constant(aff::PAE) = aff.v.constant
 
 # iterator
 
 # add to expression
 
-function Base.isequal(aff::ParametrizedAffExpr{C},
-    other::ParametrizedAffExpr{C}) where {C}
-    return isequal(aff.v, other.v) &&
-isequal(aff.p, other.p)
+function Base.isequal(aff::DGAE{C,V,P}, other::DGAE{C,V,P}) where {C,V,P}
+    return isequal(aff.v, other.v) && isequal(aff.p, other.p)
 end
 
-Base.hash(aff::ParametrizedAffExpr, h::UInt) = hash(aff.v.constant, hash(aff.v.terms, h), hash(aff.p.terms, h))
+Base.hash(aff::DGAE, h::UInt) = hash(aff.v.constant, hash(aff.v.terms, h), hash(aff.p.terms, h))
 
-function SparseArrays.dropzeros(aff::ParametrizedAffExpr{C}) where C
+function SparseArrays.dropzeros(aff::DGAE{C,V,P}) where {C,V,P}
     v = SparseArrays.dropzeros(aff.v)
     p = SparseArrays.dropzeros(aff.p)
-    return PAE{C}(v,p)
+    return DGAE{C,V,P}(v,p)
 end
 
 # Check if two AffExprs are equal after dropping zeros and disregarding the
 # order. Mostly useful for testing.
-function JuMP.isequal_canonical(aff::ParametrizedAffExpr{C}, other::ParametrizedAffExpr{C}) where {C}
+function JuMP.isequal_canonical(aff::DGAE{C,V,P}, other::DGAE{C,V,P}) where {C,V,P}
     aff_nozeros = dropzeros(aff)
     other_nozeros = dropzeros(other)
     # Note: This depends on equality of OrderedDicts ignoring order.
@@ -83,20 +86,21 @@ function JuMP.isequal_canonical(aff::ParametrizedAffExpr{C}, other::Parametrized
     return isequal(aff_nozeros, other_nozeros)
 end
 
-Base.convert(::Type{ParametrizedAffExpr{C}}, v::JuMP.VariableRef) where {C} = PAE{C}(GAEv{C}(zero(C), v => one(C)), zero(GAEp{C}))
-Base.convert(::Type{ParametrizedAffExpr{C}}, v::Real) where {C} = PAE{C}(GAEv{C}(convert(C, v)), zero(GAEp{C}))
+Base.convert(::Type{PAE{C}}, v::JuMP.VariableRef) where {C} = PAE{C}(GAEv{C}(zero(C), v => one(C)), zero(GAEp{C}))
+Base.convert(::Type{PAE{C}}, p::Parameter) where {C} = PAE{C}(zero(GAEv{C}), GAEp{C}(zero(C), p => one(C)))
+Base.convert(::Type{PAE{C}}, r::Real) where {C} = PAE{C}(GAEv{C}(convert(C, r)), zero(GAEp{C}))
 
 # Check all coefficients are finite, i.e. not NaN, not Inf, not -Inf
-function JuMP._assert_isfinite(a::ParametrizedAffExpr)
+function JuMP._assert_isfinite(a::DGAE)
     _assert_isfinite(v)
     for (coef, par) in linear_terms(a.p)
         isfinite(coef) || error("Invalid coefficient $coef on parameter $par.")
     end
 end
 
-JuMP.value(a::ParametrizedAffExpr) = JuMP.value(a, value)
+JuMP.value(a::DGAE) = JuMP.value(a, value)
 
-function JuMP.check_belongs_to_model(a::ParametrizedAffExpr, model::AbstractModel)
+function JuMP.check_belongs_to_model(a::DGAE, model::AbstractModel)
     JuMP.check_belongs_to_model(a.v, model)
     JuMP.check_belongs_to_model(a.p, model)
 end
@@ -131,14 +135,14 @@ function _shift_constant(set::MOI.Interval, offset)
     MOI.Interval(set.lower + offset, set.upper + offset)
 end
 
-function JuMP.build_constraint(_error::Function, aff::ParametrizedAffExpr, set::S) where S <: Union{MOI.LessThan,MOI.GreaterThan,MOI.EqualTo}
+function JuMP.build_constraint(_error::Function, aff::PAE, set::S) where S <: Union{MOI.LessThan,MOI.GreaterThan,MOI.EqualTo}
     offset = aff.v.constant
     aff.v.constant = 0.0
     shifted_set = _shift_constant(set, -offset)
     return JuMP.ScalarConstraint(aff, shifted_set)
 end
 
-function JuMP.build_constraint(_error::Function, aff::ParametrizedAffExpr, lb, ub)
+function JuMP.build_constraint(_error::Function, aff::PAE, lb, ub)
     JuMP.build_constraint(_error, aff, MOI.Interval(lb, ub))
 end
 

@@ -17,7 +17,7 @@ function JuMP.function_string(::Type{IJuliaMode}, p::Parameter)
     end
 end
 
-function JuMP.function_string(mode, a::ParameterJuMP.ParametrizedAffExpr, show_constant=true)
+function JuMP.function_string(mode, a::ParameterJuMP.PAE, show_constant=true)
     ret = ""
     str_v = JuMP.function_string(mode, a.v, false)
     if str_v != "0"

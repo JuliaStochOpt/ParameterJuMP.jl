@@ -373,14 +373,14 @@ function test14(args...)
         set_name(b, "b")
 
         exp1 = x + y + a
-        @test typeof(exp1) == ParameterJuMP.ParametrizedAffExpr{Float64}
+        @test typeof(exp1) == ParameterJuMP.PAE{Float64}
         @test length(exp1.v.terms) == 2
         exp1 = exp1 + y
         @test length(exp1.v.terms) == 2
 
-        @test iszero(ParameterJuMP.ParametrizedAffExpr{Float64}())
+        @test iszero(ParameterJuMP.PAE{Float64}())
         @test iszero(zero(exp1))
-        @test iszero(one(exp1) - one(ParameterJuMP.ParametrizedAffExpr{Float64}))
+        @test iszero(one(exp1) - one(ParameterJuMP.PAE{Float64}))
         @test iszero(SparseArrays.dropzeros((exp1 - copy(exp1))))
 
         empty_func(empty_arg) = 0
@@ -421,7 +421,7 @@ function test14(args...)
 
         exp5 = x + y
         @test_expression_with_string x + y "x + y"
-        @test_expression_with_string convert(ParameterJuMP.ParametrizedAffExpr{Float64}, exp5) "x + y"
+        @test_expression_with_string convert(ParameterJuMP.PAE{Float64}, exp5) "x + y"
 
     end
 end
