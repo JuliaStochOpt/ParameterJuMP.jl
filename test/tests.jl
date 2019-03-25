@@ -425,3 +425,19 @@ function test14(args...)
 
     end
 end
+
+function test15(args...)
+    @testset "Test add ctr - alternative" begin
+        model = ModelWithParams(args...)
+        α = Parameter(model, 1.0)
+        fix(α, -1.0)
+        @variable(model, x)
+        exp = x - α
+        cref = @constraint(model, exp ≤ 0)
+        @objective(model, Max, x)
+        JuMP.optimize!(model)
+        @test JuMP.value(x) == -1.0
+        @test JuMP.dual(cref) == -1.0
+        @test JuMP.dual(α) == -1.0
+    end
+end
