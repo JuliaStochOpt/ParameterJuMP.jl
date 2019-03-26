@@ -51,7 +51,7 @@ function test2(args...)
     @testset "LessThan modification" begin
         model = ModelWithParams(args...)
         α = Parameter(model, 1.0)
-        ParameterJuMP.setvalue!(α, -1.0)
+        fix(α, -1.0)
         @variable(model, x)
         cref = @constraint(model, x ≤ α)
         @objective(model, Max, x)
@@ -60,7 +60,7 @@ function test2(args...)
         @test JuMP.dual(cref) == -1.0
         @test JuMP.dual(α) == -1.0
 
-        ParameterJuMP.setvalue!(α, 2.0)
+        fix(α, 2.0)
         JuMP.optimize!(model)
         @test JuMP.value(x) == 2.0
         @test JuMP.dual(cref) == -1.0
@@ -72,7 +72,7 @@ function test3(args...)
     @testset "EqualTO modification" begin
         model = ModelWithParams(args...)
         α = Parameter(model, 1.0)
-        ParameterJuMP.setvalue!(α, -1.0)
+        fix(α, -1.0)
         @variable(model, x)
         cref = @constraint(model, x == α)
         @objective(model, Max, x)
@@ -81,7 +81,7 @@ function test3(args...)
         @test JuMP.dual(cref) == -1.0
         @test JuMP.dual(α) == -1.0
 
-        ParameterJuMP.setvalue!(α, 2.0)
+        fix(α, 2.0)
         JuMP.optimize!(model)
         @test JuMP.value(x) == 2.0
         @test JuMP.dual(cref) == -1.0
@@ -93,7 +93,7 @@ function test4(args...)
     @testset "GreaterThan modification" begin
         model = ModelWithParams(args...)
         α = Parameter(model, 1.0)
-        ParameterJuMP.setvalue!(α, -1.0)
+        fix(α, -1.0)
         @variable(model, x)
         cref = @constraint(model, x >= α)
         @objective(model, Min, x)
@@ -102,7 +102,7 @@ function test4(args...)
         @test JuMP.dual(cref) == 1.0
         @test JuMP.dual(α) == 1.0
 
-        ParameterJuMP.setvalue!(α, 2.0)
+        fix(α, 2.0)
         JuMP.optimize!(model)
         @test JuMP.value(x) == 2.0
         @test JuMP.dual(cref) == 1.0
@@ -193,7 +193,7 @@ function test10(args...)
     @testset "Add after solve" begin
         model = ModelWithParams(args...)
         α = Parameter(model, 1.0)
-        ParameterJuMP.setvalue!(α, -1.0)
+        fix(α, -1.0)
         @variable(model, x)
         cref = @constraint(model, x <= α)
         @objective(model, Max, x)
@@ -232,7 +232,7 @@ function test11(args...)
     @testset "Change coefficient" begin
         model = ModelWithParams(args...)
         α = Parameter(model, 1.0)
-        ParameterJuMP.setvalue!(α, -1.0)
+        fix(α, -1.0)
         @variable(model, x)
         cref = @constraint(model, x >= α)
         @objective(model, Min, x)
@@ -290,7 +290,7 @@ function test12(args...)
     @testset "Remove parameter from constraint" begin
         model = ModelWithParams(args...)
         α = Parameter(model, 1.0)
-        ParameterJuMP.setvalue!(α, -1.0)
+        fix(α, -1.0)
         @variable(model, x)
         cref = @constraint(model, x >= α)
         @objective(model, Min, x)
@@ -308,7 +308,7 @@ function test12(args...)
     @testset "Remove parameter from all constraint" begin
         model = ModelWithParams(args...)
         α = Parameter(model, 1.0)
-        ParameterJuMP.setvalue!(α, -1.0)
+        fix(α, -1.0)
         @variable(model, x)
         cref = @constraint(model, x >= α)
         @objective(model, Min, x)
@@ -330,17 +330,114 @@ function test13(args...)
         model = ModelWithParams(args...)
         ParameterJuMP.set_no_duals(model)
         α = Parameter(model, 1.0)
-        ParameterJuMP.setvalue!(α, -1.0)
+        fix(α, -1.0)
         @variable(model, x)
         cref = @constraint(model, x == α)
         @objective(model, Max, x)
         JuMP.optimize!(model)
         @test JuMP.value(x) == -1.0
         @test JuMP.dual(cref) == -1.0
-        @test_throws ErrorException JuMP.dual(α)
+        @test isnan(JuMP.dual(α))
 
         model_2 = ModelWithParams(args...)
         y = Parameter(model_2, 1.0)
         @test_throws ErrorException ParameterJuMP.set_no_duals(model_2)
+    end
+end
+
+using SparseArrays
+
+macro test_expression(expr)
+    esc(quote
+            @test JuMP.isequal_canonical(@expression(m, $expr), $expr)
+    end)
+end
+
+macro test_expression_with_string(expr, str)
+    esc(quote
+            @test string(@inferred $expr) == $str
+            @test_expression $expr
+    end)
+end
+
+function test14(args...)
+    @testset "Test ParametrizedAffExpr" begin
+        m = ModelWithParams()
+        @variable(m, x)
+        @variable(m, y)
+        a = Parameter(m)
+        @test name(a) == ""
+        set_name(a, "a")
+        @test name(a) == "a"
+        b = Parameter(m)
+        set_name(b, "b")
+
+        exp1 = x + y + a
+        @test typeof(exp1) == ParameterJuMP.PAE{Float64}
+        @test length(exp1.v.terms) == 2
+        exp1 = exp1 + y
+        @test length(exp1.v.terms) == 2
+
+        @test iszero(ParameterJuMP.PAE{Float64}())
+        @test iszero(zero(exp1))
+        @test iszero(one(exp1) - one(ParameterJuMP.PAE{Float64}))
+        @test iszero(SparseArrays.dropzeros((exp1 - copy(exp1))))
+
+        empty_func(empty_arg) = 0
+        exp2 = map_coefficients(Base.zero, exp1)
+        @test iszero(SparseArrays.dropzeros(exp2))
+        @test iszero(constant(exp2))
+
+        @test isequal_canonical(exp1, copy(exp1))
+
+        exp4 = exp1 - copy(exp1)
+        @test iszero(SparseArrays.dropzeros(exp4))
+
+        # var + num
+        @test_expression_with_string 7.1 * x + 2.5 "7.1 x + 2.5"
+        @test_expression_with_string 1.2 * y + 1.2 "1.2 y + 1.2"
+        # par + num
+        @test_expression_with_string 7.1 * a + 2.5 "7.1 a + 2.5"
+        @test_expression_with_string 1.2 * b + 1.2 "1.2 b + 1.2"
+
+        # par + par + num
+        @test_expression_with_string b + a + 1.2 "b + a + 1.2"
+        # par - par + num
+        @test_expression_with_string b - a + 1.2 "b - a + 1.2"
+        # par - (par - num)
+        @test_expression_with_string b - (a - 1.2) "b - a + 1.2"
+        # par - par - num
+        @test_expression_with_string b - a - 1.2 "b - a - 1.2"
+        # var + par + num
+        @test_expression_with_string x + a + 1.2 "x + a + 1.2"
+        # var + var + par + num
+        @test_expression_with_string x + y + a + 1.2 "x + y + a + 1.2"
+        # var + var - par + num
+        @test_expression_with_string x + y - a + 1.2 "x + y - a + 1.2"
+        # var + var - par + par + num
+        @test_expression_with_string x + y - a + b + 1.2 "x + y + b - a + 1.2"
+        # par + par - var + var + num
+        @test_expression_with_string a + b - x + y + 1.2 "y - x + a + b + 1.2"
+
+        exp5 = x + y
+        @test_expression_with_string x + y "x + y"
+        @test_expression_with_string convert(ParameterJuMP.PAE{Float64}, exp5) "x + y"
+
+    end
+end
+
+function test15(args...)
+    @testset "Test add ctr - alternative" begin
+        model = ModelWithParams(args...)
+        α = Parameter(model, 1.0)
+        fix(α, -1.0)
+        @variable(model, x)
+        exp = x - α
+        cref = @constraint(model, exp ≤ 0)
+        @objective(model, Max, x)
+        JuMP.optimize!(model)
+        @test JuMP.value(x) == -1.0
+        @test JuMP.dual(cref) == -1.0
+        @test JuMP.dual(α) == -1.0
     end
 end
