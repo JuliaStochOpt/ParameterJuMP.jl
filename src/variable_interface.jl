@@ -10,35 +10,30 @@ JuMP.fix_index(p::Parameter) =
 JuMP.set_fix_index(p::Parameter, cindex) =
     error("Parameters do not have have explicit constraints, hence no constraint index.")
 function JuMP.fix(p::Parameter, val::Real)
-    params = _getparamdata(p)::ParameterData
-    params.sync = false
-    params.future_values[p.ind] = val
+    data = _getparamdata(p)::ParameterData
+    data.sync = false
+    data.future_values[index(data, p)] = val
     return nothing
 end
 JuMP.unfix(p::Parameter) = error("Parameters cannot be unfixed.")
 function JuMP.fix_value(p::Parameter)
-    params = _getparamdata(p)::ParameterData
-    params.future_values[p.ind]
+    data = _getparamdata(p)::ParameterData
+    data.future_values[index(data, p)]
 end
 JuMP.FixRef(p::Parameter) =
     error("Parameters do not have have explicit constraints, hence no constraint reference.")
 
 
-"""
-    fix(p::Parameter, val::Real)::Nothing
-
-Sets the parameter `p` to the new value `val`.
-"""
-function fix(p::Parameter, val::Real)
-    params = _getparamdata(p)::ParameterData
-    params.sync = false
-    params.future_values[p.ind] = val
+function JuMP.fix(p::Parameter, val::Real)
+    data = _getparamdata(p)::ParameterData
+    data.sync = false
+    data.future_values[index(data, p)] = val
     return nothing
 end
 
 function JuMP.value(p::Parameter)
-    params = _getparamdata(p)::ParameterData
-    params.future_values[p.ind]
+    data = _getparamdata(p)::ParameterData
+    data.future_values[index(data, p)]
 end
 
 # interface continues
@@ -98,7 +93,7 @@ function Base.isequal(p1::Parameter, p2::Parameter)
     return owner_model(p1) === owner_model(p2) && p1.ind == p2.ind
 end
 
-index(p::Parameter) = v.ind
+# index(p::Parameter) = v.ind
 
 function JuMP.name(p::Parameter)
     dict = _getparamdata(p).names
