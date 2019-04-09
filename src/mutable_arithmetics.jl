@@ -92,3 +92,7 @@ end
 function JuMP.add_to_expression!(aff::PAE, new_coef, new_param::Parameter)
     JuMP.add_to_expression!(aff.p, new_coef, new_param)
 end
+function JuMP.add_to_expression!(lhs_aff::PAE, rhs_aff::PAE)
+    JuMP.add_to_expression!(lhs_aff.p, rhs_aff.p)
+    JuMP.add_to_expression!(lhs_aff.v, rhs_aff.v)
+end
