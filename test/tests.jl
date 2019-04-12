@@ -223,7 +223,7 @@ function test11(args...)
         @test JuMP.dual(cref) == -1.0
         @test JuMP.dual(α) == 0.0
 
-        set_coefficient(cref, α, 1.0) 
+        set_coefficient(cref, α, 1.0)
         JuMP.optimize!(model)
         @test JuMP.value(x) == -1.0
         @test JuMP.dual(cref) == -1.0
@@ -259,7 +259,7 @@ function test11(args...)
         @test JuMP.dual(cref) == -1.0
         @test JuMP.dual(α) == 0.0
 
-        set_coefficient(cref, α, 1.0) 
+        set_coefficient(cref, α, 1.0)
         JuMP.optimize!(model)
         @test JuMP.value(x) == -1.0
         @test JuMP.dual(cref) == -1.0
@@ -278,7 +278,7 @@ function test11(args...)
         @test JuMP.dual(cref) == -1.0
         @test JuMP.dual(α) == 0.0
 
-        set_coefficient(cref, α, 1.0) 
+        set_coefficient(cref, α, 1.0)
         JuMP.optimize!(model)
         @test JuMP.value(x) == -1.0
         @test JuMP.dual(cref) == -1.0
