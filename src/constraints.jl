@@ -19,6 +19,8 @@ const PAE{C} = ParametrizedAffExpr{C}
 const PAEC{S} = JuMP.ScalarConstraint{PAE{Float64}, S}
 const PVAEC{S} = JuMP.VectorConstraint{PAE{Float64}, S}
 
+Base.one(::Type{Parameter}) = one(GAEp{Float64})
+
 Base.iszero(a::PAE) = iszero(a.v) && iszero(a.p)
 Base.zero(::Type{DGAE{C,V,P}}) where {C,V,P} = DGAE{C,V,P}(zero(GAEv{C}), zero(GAEp{C}))
 Base.one(::Type{DGAE{C,V,P}}) where {C,V,P} = DGAE{C,V,P}(one(GAEv{C}), zero(GAEp{C}))
