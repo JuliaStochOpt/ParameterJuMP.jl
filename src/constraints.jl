@@ -11,15 +11,15 @@ mutable struct DoubleGenericAffExpr{C,V,P} <: JuMP.AbstractJuMPScalar
 end
 const DGAE{C,V,P} = DoubleGenericAffExpr{C,V,P}
 
-const ParametrizedGenericAffExpr{C,V} = DoubleGenericAffExpr{C, V, Parameter}
+const ParametrizedGenericAffExpr{C,V} = DoubleGenericAffExpr{C, V, ParameterRef}
 const PGAE{C,V} = ParametrizedGenericAffExpr{C,V}
 
-const ParametrizedAffExpr{C} = DoubleGenericAffExpr{C, JuMP.VariableRef, Parameter}
+const ParametrizedAffExpr{C} = DoubleGenericAffExpr{C, JuMP.VariableRef, ParameterRef}
 const PAE{C} = ParametrizedAffExpr{C}
 const PAEC{S} = JuMP.ScalarConstraint{PAE{Float64}, S}
 const PVAEC{S} = JuMP.VectorConstraint{PAE{Float64}, S}
 
-Base.one(::Type{Parameter}) = one(GAEp{Float64})
+Base.one(::Type{ParameterRef}) = one(GAEp{Float64})
 
 Base.iszero(a::PAE) = iszero(a.v) && iszero(a.p)
 Base.zero(::Type{DGAE{C,V,P}}) where {C,V,P} = DGAE{C,V,P}(zero(GAEv{C}), zero(GAEp{C}))
@@ -28,7 +28,7 @@ Base.zero(a::PAE) = zero(typeof(a))
 Base.one( a::PAE) =  one(typeof(a))
 Base.copy(a::DGAE{C,V,P}) where {C,V,P}  = DGAE{C,V,P}(copy(a.v), copy(a.p))
 Base.broadcastable(expr::PAE) = Ref(expr)
-# JuMP.GenericAffExpr{C,Parameter}(params::Vector{Parameter},coefs::Vector{C}) = JuMP.GenericAffExpr{C}(params,coefs,C(0.0))
+# JuMP.GenericAffExpr{C,ParameterRef}(params::Vector{ParameterRef},coefs::Vector{C}) = JuMP.GenericAffExpr{C}(params,coefs,C(0.0))
 
 DGAE{C,V,P}() where {C,V,P} = zero(DGAE{C,V,P})
 
@@ -89,7 +89,7 @@ function JuMP.isequal_canonical(aff::DGAE{C,V,P}, other::DGAE{C,V,P}) where {C,V
 end
 
 Base.convert(::Type{PAE{C}}, v::JuMP.VariableRef) where {C} = PAE{C}(GAEv{C}(zero(C), v => one(C)), zero(GAEp{C}))
-Base.convert(::Type{PAE{C}}, p::Parameter) where {C} = PAE{C}(zero(GAEv{C}), GAEp{C}(zero(C), p => one(C)))
+Base.convert(::Type{PAE{C}}, p::ParameterRef) where {C} = PAE{C}(zero(GAEv{C}), GAEp{C}(zero(C), p => one(C)))
 Base.convert(::Type{PAE{C}}, r::Real) where {C} = PAE{C}(GAEv{C}(convert(C, r)), zero(GAEp{C}))
 
 # Check all coefficients are finite, i.e. not NaN, not Inf, not -Inf

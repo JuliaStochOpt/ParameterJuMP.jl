@@ -29,7 +29,7 @@ Sets the parameter `p` to the new value `val`.
 function fix(p::ParameterRef, val::Real)
     params = _getparamdata(p)::ParameterData
     params.sync = false
-    params.future_values[p.ind] = val
+    params.future_values[index(p)] = val
     return nothing
 end
 
@@ -94,8 +94,6 @@ end
 function Base.isequal(p1::ParameterRef, p2::ParameterRef)
     return owner_model(p1) === owner_model(p2) && p1.ind == p2.ind
 end
-
-index(p::ParameterRef) = v.ind
 
 function JuMP.name(p::ParameterRef)
     dict = _getparamdata(p).names

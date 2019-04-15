@@ -70,16 +70,15 @@ mutable struct ParameterData
             Float64[],
             true,
             Dict{Int64, Vector{JuMP.ConstraintRef}}(),
-<<<<<<< HEAD
-            Dict{CtrRef{SAF, EQ}, JuMP.GenericAffExpr{Float64,Parameter}}(),
-            Dict{CtrRef{SAF, LE}, JuMP.GenericAffExpr{Float64,Parameter}}(),
-            Dict{CtrRef{SAF, GE}, JuMP.GenericAffExpr{Float64,Parameter}}(),
-            Dict{Parameter, String}(),
+            Dict{CtrRef{SAF, EQ}, JuMP.GenericAffExpr{Float64,ParameterRef}}(),
+            Dict{CtrRef{SAF, LE}, JuMP.GenericAffExpr{Float64,ParameterRef}}(),
+            Dict{CtrRef{SAF, GE}, JuMP.GenericAffExpr{Float64,ParameterRef}}(),
+            Dict{ParameterRef, String}(),
             false,
-            Float64[],
+            Dict{Int64, Int64}(),
             false,
             false,
-            Dict{Int64, Int64}()
+            Float64[]
             )
     end
 end
