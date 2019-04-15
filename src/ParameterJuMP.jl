@@ -3,6 +3,7 @@ module ParameterJuMP
 using SparseArrays
 
 using JuMP
+export index
 using MathOptInterface
 const MOI = MathOptInterface
 const MOIU = MOI.Utilities
@@ -98,13 +99,13 @@ function set_no_duals(data::ParameterData)
 end
 
 """
-    index(p::ParameterRef)::Int64
+    JuMP.index(p::ParameterRef)::Int64
 
 Return the internal index of the parameter `p`.
 """
-index(p::ParameterRef) = index(_getparamdata(p.model), p)::Int64
-index(model::JuMP.Model, p::ParameterRef) = index(_getparamdata(model), p)::Int64
-function index(data::ParameterData, p::ParameterRef)::Int64
+JuMP.index(p::ParameterRef) = index(_getparamdata(p.model), p)::Int64
+JuMP.index(model::JuMP.Model, p::ParameterRef) = index(_getparamdata(model), p)::Int64
+function JuMP.index(data::ParameterData, p::ParameterRef)::Int64
     if data.has_deletion
         return data.index_map[p.ind]
     else
