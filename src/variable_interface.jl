@@ -22,11 +22,11 @@ end
 
 
 """
-    fix(p::Parameter, val::Real)::Nothing
+    fix(p::ParameterRef, val::Real)::Nothing
 
 Sets the parameter `p` to the new value `val`.
 """
-function fix(p::Parameter, val::Real)
+function fix(p::ParameterRef, val::Real)
     params = _getparamdata(p)::ParameterData
     params.sync = false
     params.future_values[p.ind] = val
@@ -95,7 +95,7 @@ function Base.isequal(p1::ParameterRef, p2::ParameterRef)
     return owner_model(p1) === owner_model(p2) && p1.ind == p2.ind
 end
 
-index(p::Parameter) = v.ind
+index(p::ParameterRef) = v.ind
 
 function JuMP.name(p::ParameterRef)
     dict = _getparamdata(p).names
