@@ -34,14 +34,14 @@ and also returns the same `Model` type.
 The key constructor of ParameterJuMP is:
 
 ```julia
-Parameter(model::JuMP.Model, value::Number)
+add_parameter(model::JuMP.Model, value::Number)
 ```
 
 Which adds a parameter fixed at `value` to the JuMP model: `model`.
 It is possible to create mutiple parameters at the same time with:
 
 ```julia
-Parameters(model::JuMP.Model, values::Vector{Number})
+add_parameters(model::JuMP.Model, values::Vector{Number})
 ```
 
 Which returns a vector of parameters.
@@ -50,14 +50,14 @@ It is possible to change the current value of a parameter with the
 function:
 
 ```julia
-fix(p::Parameter, new_value::Number)
+fix(p::ParameterRef, new_value::Number)
 ```
 
 Finally, the `dual` function of JuMP is overloaded to return duals
 for parameters:
 
 ```julia
-dual(p::Parameter)
+dual(p::ParameterRef)
 ```
 
 Last but not least!
@@ -90,7 +90,7 @@ model = ModelWithParams(with_optimizer(SOME_SOLVER.Optimizer))
 @variable(model, x)
 
 # Create a parameter fixed at 10
-Parameter(model, a, 10)
+add_parameter(model, a, 10)
 
 # adds a constraint mixing variables and parameters to the model
 @constraint(model, x >= a)
@@ -196,9 +196,9 @@ model_pure = Model(with_optimizer(SOME_SOLVER.Optimizer))
 @variable(model_pure, x[1:N] >= 0)
 
 # add dummy fixed variables
-y = [Parameter(model_pure, value_for_y[i]) for i in 1:M]
+y = [add_parameter(model_pure, value_for_y[i]) for i in 1:M]
 # or
-# y = Parameters(model_pure, value_for_y)
+# y = add_parameters(model_pure, value_for_y)
 
 # add constraints
 @constraint(model_pure, ctr[k in 1:P], 

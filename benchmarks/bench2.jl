@@ -6,11 +6,11 @@ using TimerOutputs
 #= 
     add parameters
 =#
-function add_parameters(model, N)
-    x = Parameters(model, 4.0*ones(N))
+function add_parameters2(model, N)
+    x = add_parameters(model, 4.0*ones(N))
 end
 function add_parameter_loop(model, N)
-    x = [Parameter(model, 4.0) for i in 1:N]
+    x = [add_parameter(model, 4.0) for i in 1:N]
 end
 
 #= 
@@ -71,7 +71,7 @@ end
 
 function bench_create_param(N_Parameters::Int, N_Variables::Int, N_Constraints::Int)
     model = ModelWithParams(with_optimizer(GLPK.Optimizer))
-    @timeit to "create params" x = add_parameters(model, N_Parameters)
+    @timeit to "create params" x = add_parameters2(model, N_Parameters)
     @timeit to "create vars" y = add_variables(model, N_Variables)
 
     @timeit to "ctr vars" add_constraints_0(model, y, y, N_Constraints)
@@ -86,7 +86,7 @@ function bench_create_param(N_Parameters::Int, N_Variables::Int, N_Constraints::
     @timeit to "ctr mixed2 params" add_constraints_3(model, x, x, N_Constraints)
     @timeit to "ctr mixed2 both" add_constraints_3(model, x, y, N_Constraints)
 
-    data = ParameterJuMP.getparamdata(model)::ParameterJuMP.ParameterData
+    data = ParameterJuMP._getparamdata(model)::ParameterJuMP.ParameterData
     @timeit to "sync" ParameterJuMP.sync(data)
 
     @timeit to "solve" optimize!(model)

@@ -325,7 +325,7 @@ function slave_model(PARAM, K)
         # variables are added to the optimization model, while parameters
         # are not. Parameters are merged with LP problem constants and do not
         # increase the model dimensions.
-        β = Parameters(slave, zeros(N_Candidates))
+        β = add_parameters(slave, zeros(N_Candidates))
     else
         # Create fixed variables
         @variables(slave, begin
