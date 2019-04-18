@@ -9,7 +9,7 @@ const MOI = MathOptInterface
 const MOIU = MOI.Utilities
 
 export
-ModelWithParams, ParameterRef, add_parameter, add_parameters, Param
+ModelWithParams, ParameterRef, add_parameter, add_parameters, all_parameters, Param
 
 # types
 # ------------------------------------------------------------------------------
@@ -232,6 +232,11 @@ function add_parameters(model::JuMP.Model, val::AbstractArray{R,N}) where {R,N}
     end
 
     return out
+end
+
+function all_parameters(model::JuMP.AbstractModel)
+    data = _getparamdata(model)
+    return ParameterRef[ParameterRef(ind, model) for ind in data.inds]
 end
 
 # solve

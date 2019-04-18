@@ -3,6 +3,7 @@ function test0(args...)
         m_slave = ModelWithParams(args...)
 
         x = add_parameters(m_slave, 4.0*ones(2))
+        @test x == all_parameters(m_slave)
         @variable(m_slave, y[1:6])
 
         @constraint(m_slave, ctr1, 3*y[1] >= 2 - 7*x[1])
@@ -203,6 +204,7 @@ function test10(args...)
         @test JuMP.dual(α) == -1.0
 
         b = add_parameter(model, -2.0)
+        @test all_parameters(model) == [α, b]
         cref = @constraint(model, x <= b)
         JuMP.optimize!(model)
         @test JuMP.value(x) == -2.0
@@ -371,6 +373,7 @@ function test14(args...)
         @test name(a) == "a"
         b = add_parameter(m)
         set_name(b, "b")
+        @test all_parameters(m) == [a, b]
 
         exp1 = x + y + a
         @test typeof(exp1) == ParameterJuMP.PAE{Float64}
