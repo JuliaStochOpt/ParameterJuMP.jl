@@ -1,4 +1,4 @@
-function JuMP.function_string(::Type{REPLMode}, p::Parameter)
+function JuMP.function_string(::Type{REPLMode}, p::ParameterRef)
     par_name = name(p)
     if !isempty(par_name)
         return par_name
@@ -7,7 +7,7 @@ function JuMP.function_string(::Type{REPLMode}, p::Parameter)
     end
 end
 
-function JuMP.function_string(::Type{IJuliaMode}, p::Parameter)
+function JuMP.function_string(::Type{IJuliaMode}, p::ParameterRef)
     par_name = name(p)
     if !isempty(par_name)
         # TODO: This is wrong if parameter name constains extra "]"

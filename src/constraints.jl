@@ -3,7 +3,7 @@
 
 const GAE{C,V} = JuMP.GenericAffExpr{C,V}
 const GAEv{C} = JuMP.GenericAffExpr{C,JuMP.VariableRef}
-const GAEp{C} = JuMP.GenericAffExpr{C,Parameter}
+const GAEp{C} = JuMP.GenericAffExpr{C,ParameterRef}
 
 mutable struct DoubleGenericAffExpr{C,V,P} <: JuMP.AbstractJuMPScalar
     v::JuMP.GenericAffExpr{C,V}
@@ -11,13 +11,15 @@ mutable struct DoubleGenericAffExpr{C,V,P} <: JuMP.AbstractJuMPScalar
 end
 const DGAE{C,V,P} = DoubleGenericAffExpr{C,V,P}
 
-const ParametrizedGenericAffExpr{C,V} = DoubleGenericAffExpr{C, V, Parameter}
+const ParametrizedGenericAffExpr{C,V} = DoubleGenericAffExpr{C, V, ParameterRef}
 const PGAE{C,V} = ParametrizedGenericAffExpr{C,V}
 
-const ParametrizedAffExpr{C} = DoubleGenericAffExpr{C, JuMP.VariableRef, Parameter}
+const ParametrizedAffExpr{C} = DoubleGenericAffExpr{C, JuMP.VariableRef, ParameterRef}
 const PAE{C} = ParametrizedAffExpr{C}
 const PAEC{S} = JuMP.ScalarConstraint{PAE{Float64}, S}
 const PVAEC{S} = JuMP.VectorConstraint{PAE{Float64}, S}
+
+Base.one(::Type{ParameterRef}) = one(GAEp{Float64})
 
 Base.iszero(a::PAE) = iszero(a.v) && iszero(a.p)
 Base.zero(::Type{DGAE{C,V,P}}) where {C,V,P} = DGAE{C,V,P}(zero(GAEv{C}), zero(GAEp{C}))
@@ -26,7 +28,7 @@ Base.zero(a::PAE) = zero(typeof(a))
 Base.one( a::PAE) =  one(typeof(a))
 Base.copy(a::DGAE{C,V,P}) where {C,V,P}  = DGAE{C,V,P}(copy(a.v), copy(a.p))
 Base.broadcastable(expr::PAE) = Ref(expr)
-# JuMP.GenericAffExpr{C,Parameter}(params::Vector{Parameter},coefs::Vector{C}) = JuMP.GenericAffExpr{C}(params,coefs,C(0.0))
+# JuMP.GenericAffExpr{C,ParameterRef}(params::Vector{ParameterRef},coefs::Vector{C}) = JuMP.GenericAffExpr{C}(params,coefs,C(0.0))
 
 DGAE{C,V,P}() where {C,V,P} = zero(DGAE{C,V,P})
 
@@ -87,7 +89,7 @@ function JuMP.isequal_canonical(aff::DGAE{C,V,P}, other::DGAE{C,V,P}) where {C,V
 end
 
 Base.convert(::Type{PAE{C}}, v::JuMP.VariableRef) where {C} = PAE{C}(GAEv{C}(zero(C), v => one(C)), zero(GAEp{C}))
-Base.convert(::Type{PAE{C}}, p::Parameter) where {C} = PAE{C}(zero(GAEv{C}), GAEp{C}(zero(C), p => one(C)))
+Base.convert(::Type{PAE{C}}, p::ParameterRef) where {C} = PAE{C}(zero(GAEv{C}), GAEp{C}(zero(C), p => one(C)))
 Base.convert(::Type{PAE{C}}, r::Real) where {C} = PAE{C}(GAEv{C}(convert(C, r)), zero(GAEp{C}))
 
 # Check all coefficients are finite, i.e. not NaN, not Inf, not -Inf
@@ -158,8 +160,8 @@ function JuMP.add_constraint(m::JuMP.Model, c::PAEC{S}, name::String="") where S
 
     # needed for lazy get dual
     if lazy_duals(data)
-        for (param, coef) in c.func.p.terms
-            push!(data.constraints_map[param.ind], ParametrizedConstraintRef(cref, coef))
+        for (p, coef) in c.func.p.terms
+            push!(data.constraints_map[index(data, p)], ParametrizedConstraintRef(cref, coef))
         end
     end
 
@@ -188,8 +190,9 @@ end
 
 function _update_constraint(data::ParameterData, cref, gaep::GAEp{C}) where C
     val = 0.0
-    @inbounds for (param, coef) in gaep.terms
-        val += coef * (data.future_values[param.ind] - data.current_values[param.ind])
+    @inbounds for (p, coef) in gaep.terms
+        ind = index(data, p)
+        val += coef * (data.future_values[ind] - data.current_values[ind])
     end
     _update_constraint(data, cref, val)
     return nothing
@@ -211,19 +214,19 @@ end
 # Duals
 # ------------------------------------------------------------------------------
 
-function JuMP.dual(p::Parameter)
+function JuMP.dual(p::ParameterRef)
     params = _getparamdata(p)::ParameterData
     if lazy_duals(params)
         return _getdual(p)
     else
-        return params.dual_values[p.ind]
+        return params.dual_values[index(params, p)]
     end
 end
 
 # lazy
 
-function _getdual(p::Parameter)
-    return _getdual(p.model, p.ind)
+function _getdual(p::ParameterRef)
+    return _getdual(p.model, index(p))
 end
 function _getdual(pcr::ParametrizedConstraintRef)::Float64
     pcr.coef * JuMP.dual(pcr.cref)
@@ -251,17 +254,17 @@ function _update_duals(data::ParameterData)
     return nothing
 end
 
-function _update_duals(data, ::Type{S}) where S
+function _update_duals(data::ParameterData, ::Type{S}) where S
     for (cref, gaep) in _get_param_dict(data, S)
         _update_duals(data, cref, gaep)
     end
     return nothing
 end
 
-function _update_duals(data, cref, gaep)
+function _update_duals(data::ParameterData, cref, gaep)
     dual_sol = JuMP.dual(cref)
-    @inbounds for (param, coef) in gaep.terms
-        data.dual_values[param.ind] -= coef * dual_sol
+    @inbounds for (p, coef) in gaep.terms
+        data.dual_values[index(data, p)] -= coef * dual_sol
     end
     return nothing
 end
@@ -269,43 +272,44 @@ end
 # constraint modification
 # ------------------------------------------------------------------------------
 
-function JuMP.set_coefficient(con::CtrRef{F, S}, param::Parameter, coef::Number) where {F<:SAF, S}
-    data = _getparamdata(param)
+function JuMP.set_coefficient(con::CtrRef{F, S}, p::ParameterRef, coef::Number) where {F<:SAF, S}
+    data = _getparamdata(p)
     dict = _get_param_dict(data, S)
     old_coef = 0.0
+    ind = index(data, p)
     if haskey(dict, con)
         gaep = dict[con]
-        old_coef = get!(gaep.terms, param, 0.0)
-        gaep.terms[param] = coef
+        old_coef = get!(gaep.terms, p, 0.0)
+        gaep.terms[p] = coef
     else
         # TODO fix type C
-        dict[con] = GAEp{Float64}(zero(Float64), param => coef)
+        dict[con] = GAEp{Float64}(zero(Float64), p => coef)
     end
     if !iszero(coef-old_coef)
-        val = (coef-old_coef)*data.current_values[param.ind]
+        val = (coef-old_coef)*data.current_values[ind]
         _update_constraint(data, con, val)
-        if !iszero(data.future_values[param.ind] - data.current_values[param.ind])
+        if !iszero(data.future_values[ind] - data.current_values[ind])
             data.sync = false
         end
     end
     if lazy_duals(data)
-        ctr_map = data.constraints_map[param.ind]
+        ctr_map = data.constraints_map[ind]
         found_ctr = false
         if isempty(ctr_map)
             push!(ctr_map, ParametrizedConstraintRef(con, coef))
         else
-            for (index, pctr) in enumerate(ctr_map)
+            for (p_ind, pctr) in enumerate(ctr_map)
                 if pctr.cref == con
                     if found_ctr
-                        deleteat!(ctr_map, index)
+                        deleteat!(ctr_map, p_ind)
                     else
-                        ctr_map[index] = ParametrizedConstraintRef(con, coef)
+                        ctr_map[p_ind] = ParametrizedConstraintRef(con, coef)
                     end
                     found_ctr = true
                 end
             end
         end
-        if found_ctr && !iszero(data.future_values[param.ind])
+        if found_ctr && !iszero(data.future_values[ind])
             data.sync = false
         end
     end
@@ -313,23 +317,24 @@ function JuMP.set_coefficient(con::CtrRef{F, S}, param::Parameter, coef::Number)
 end
 
 """
-    delete_from_constraint(con, param::Parameter)
+    delete_from_constraint(con, param::ParameterRef)
 
 Removes parameter `param` from constraint `con`.
 """
-function delete_from_constraint(con::CtrRef{F, S}, param::Parameter) where {F, S}
-    data = _getparamdata(param)
+function delete_from_constraint(con::CtrRef{F, S}, p::ParameterRef) where {F, S}
+    data = _getparamdata(p)
     dict = _get_param_dict(data, S)
+    ind = index(data, p)
     if haskey(dict, con)
-        old_coef = get!(dict[con].terms, param, 0.0)
-        _update_constraint(data, con, (0.0-old_coef) * data.current_values[param.ind])
-        delete!(dict[con].terms, param)
-        if !iszero(data.future_values[param.ind] - data.current_values[param.ind])
+        old_coef = get!(dict[con].terms, p, 0.0)
+        _update_constraint(data, con, (0.0-old_coef) * data.current_values[ind])
+        delete!(dict[con].terms, p)
+        if !iszero(data.future_values[ind] - data.current_values[ind])
             data.sync = false
         end
     end
     if lazy_duals(data)
-        ctr_map = data.constraints_map[param.ind]
+        ctr_map = data.constraints_map[ind]
         found_ctr = false
         for (index, pctr) in enumerate(ctr_map)
             if pctr.cref == con
@@ -337,7 +342,7 @@ function delete_from_constraint(con::CtrRef{F, S}, param::Parameter) where {F, S
                 found_ctr = true
             end
         end
-        if found_ctr && !iszero(data.future_values[param.ind])
+        if found_ctr && !iszero(data.future_values[ind])
             data.sync = false
         end
     end
@@ -345,27 +350,28 @@ function delete_from_constraint(con::CtrRef{F, S}, param::Parameter) where {F, S
 end
 
 """
-    delete_from_constraints(param::Parameter)
+    delete_from_constraints(param::ParameterRef)
 
 Removes parameter `param` from all constraints.
 """
-function delete_from_constraints(::Type{S}, param::Parameter) where S
-    data = _getparamdata(param)
+function delete_from_constraints(::Type{S}, p::ParameterRef) where S
+    data = _getparamdata(p)
     dict = _get_param_dict(data, S)
+    ind = index(data, p)
     for (con, gaep) in dict
-        if haskey(gaep.terms, param)
-            if !iszero(gaep.terms[param]) && !iszero(data.future_values[param.ind])
+        if haskey(gaep.terms, p)
+            if !iszero(gaep.terms[p]) && !iszero(data.future_values[ind])
                 data.sync = false
             end
-            old_coef = get!(dict[con].terms, param, 0.0)
-            _update_constraint(data, con, (0.0-old_coef) * data.current_values[param.ind])
-            delete!(gaep.terms, param)
+            old_coef = get!(dict[con].terms, p, 0.0)
+            _update_constraint(data, con, (0.0-old_coef) * data.current_values[ind])
+            delete!(gaep.terms, p)
         end
     end
     if lazy_duals(data)
-        if !isempty(data.constraints_map[param.ind]) 
-            data.constraints_map[param.ind] = ParametrizedConstraintRef[]
-            if !iszero(data.future_values[param.ind])
+        if !isempty(data.constraints_map[ind]) 
+            data.constraints_map[ind] = ParametrizedConstraintRef[]
+            if !iszero(data.future_values[ind])
                 data.sync = false
             end
         end
@@ -373,7 +379,7 @@ function delete_from_constraints(::Type{S}, param::Parameter) where S
     nothing
 end
 
-function delete_from_constraints(param::Parameter)
+function delete_from_constraints(param::ParameterRef)
     delete_from_constraints(EQ, param)
     delete_from_constraints(LE, param)
     delete_from_constraints(GE, param)

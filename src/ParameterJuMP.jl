@@ -3,17 +3,17 @@ module ParameterJuMP
 using SparseArrays
 
 using JuMP
+export index
 using MathOptInterface
 const MOI = MathOptInterface
 const MOIU = MOI.Utilities
 
 export
-ModelWithParams, Parameter, Parameters
+ModelWithParams, ParameterRef, add_parameter, add_parameters, Param
 
 # types
 # ------------------------------------------------------------------------------
-
-struct Parameter <: JuMP.AbstractJuMPScalar
+struct ParameterRef <: JuMP.AbstractVariableRef
     ind::Int64 # local reference
     model::JuMP.Model
 end
@@ -43,11 +43,11 @@ mutable struct ParameterData
     # constraints where it is a RHS
     constraints_map::Dict{Int64, Vector{ParametrizedConstraintRef}}
 
-    parameters_map_saf_in_eq::Dict{CtrRef{SAF, EQ}, JuMP.GenericAffExpr{Float64,Parameter}}
-    parameters_map_saf_in_le::Dict{CtrRef{SAF, LE}, JuMP.GenericAffExpr{Float64,Parameter}}
-    parameters_map_saf_in_ge::Dict{CtrRef{SAF, GE}, JuMP.GenericAffExpr{Float64,Parameter}}
+    parameters_map_saf_in_eq::Dict{CtrRef{SAF, EQ}, JuMP.GenericAffExpr{Float64,ParameterRef}}
+    parameters_map_saf_in_le::Dict{CtrRef{SAF, LE}, JuMP.GenericAffExpr{Float64,ParameterRef}}
+    parameters_map_saf_in_ge::Dict{CtrRef{SAF, GE}, JuMP.GenericAffExpr{Float64,ParameterRef}}
 
-    names::Dict{Parameter, String}
+    names::Dict{ParameterRef, String}
 
     # overload addvariable
     # variables_map::Dict{Int64, Vector{Int64}}
@@ -55,6 +55,10 @@ mutable struct ParameterData
     # variables_map_ub::Dict{Int64, Vector{Int64}}
 
     # solved::Bool
+
+    has_deletion::Bool
+    index_map::Dict{Int64, Int64}
+
 
     lazy::Bool
 
@@ -67,14 +71,15 @@ mutable struct ParameterData
             Float64[],
             true,
             Dict{Int64, Vector{JuMP.ConstraintRef}}(),
-            Dict{CtrRef{SAF, EQ}, JuMP.GenericAffExpr{Float64,Parameter}}(),
-            Dict{CtrRef{SAF, LE}, JuMP.GenericAffExpr{Float64,Parameter}}(),
-            Dict{CtrRef{SAF, GE}, JuMP.GenericAffExpr{Float64,Parameter}}(),
-            Dict{Parameter, String}(),
-            # false,
+            Dict{CtrRef{SAF, EQ}, JuMP.GenericAffExpr{Float64,ParameterRef}}(),
+            Dict{CtrRef{SAF, LE}, JuMP.GenericAffExpr{Float64,ParameterRef}}(),
+            Dict{CtrRef{SAF, GE}, JuMP.GenericAffExpr{Float64,ParameterRef}}(),
+            Dict{ParameterRef, String}(),
+            false,
+            Dict{Int64, Int64}(),
             false,
             false,
-            Float64[],
+            Float64[]
             )
     end
 end
@@ -90,6 +95,21 @@ function set_no_duals(data::ParameterData)
         @warn "No duals mode is already activated"
     else
         error("Parameter JuMP's no duals mode can only be activated in empty models.")
+    end
+end
+
+"""
+    JuMP.index(p::ParameterRef)::Int64
+
+Return the internal index of the parameter `p`.
+"""
+JuMP.index(p::ParameterRef) = index(_getparamdata(p.model), p)::Int64
+JuMP.index(model::JuMP.Model, p::ParameterRef) = index(_getparamdata(model), p)::Int64
+function JuMP.index(data::ParameterData, p::ParameterRef)::Int64
+    if data.has_deletion
+        return data.index_map[p.ind]
+    else
+        return p.ind
     end
 end
 
@@ -122,8 +142,8 @@ _get_param_dict(data::ParameterData, ::Type{EQ}) = data.parameters_map_saf_in_eq
 _get_param_dict(data::ParameterData, ::Type{LE}) = data.parameters_map_saf_in_le
 _get_param_dict(data::ParameterData, ::Type{GE}) = data.parameters_map_saf_in_ge
 
-_getmodel(p::Parameter) = p.model
-_getparamdata(p::Parameter)::ParameterData = _getparamdata(_getmodel(p))::ParameterData
+_getmodel(p::ParameterRef) = p.model
+_getparamdata(p::ParameterRef)::ParameterData = _getparamdata(_getmodel(p))::ParameterData
 # _getparamdata(model::JuMP.Model) = model.ext[:params]::ParameterData
 function _getparamdata(model::JuMP.Model)::ParameterData
     # TODO checks dict twice
@@ -140,15 +160,15 @@ is_sync(data::ParameterData) = data.sync
 is_sync(model::JuMP.Model) = is_sync(_getparamdata(model))
 
 """
-    Parameter(model::JuMP.Model, val::Real)::Parameter
+    add_parameter(model::JuMP.Model, val::Real)::ParameterRef
 
 Adds one parameter fixed at `val` to the model `model`.
 
-    Parameter(model::JuMP.Model)::Parameter
+    add_parameter(model::JuMP.Model)::ParameterRef
 
 Adds one parameter fixed at zero to the model `model`.
 """
-function Parameter(model::JuMP.Model, val::Real)
+function add_parameter(model::JuMP.Model, val::Real)
     params = _getparamdata(model)::ParameterData
 
     ind = params.next_ind
@@ -164,30 +184,30 @@ function Parameter(model::JuMP.Model, val::Real)
 
     params.constraints_map[ind] = ParametrizedConstraintRef[]
 
-    return Parameter(ind, model)
+    return ParameterRef(ind, model)
 end
-Parameter(model) = Parameter(model, 0.0)
+add_parameter(model) = add_parameter(model, 0.0)
 
 _addsizehint!(vec::Vector, len::Integer) = sizehint!(vec, len+length(vec))
 
 """
-    Parameters(model::JuMP.Model, val::Vector{R})::Vector{Parameter}
+    add_parameters(model::JuMP.Model, val::Vector{R})::Vector{ParameterRef}
 
 Adds one parameter for each element of the vector `val`.
 
-    Parameters(model::JuMP.Model, N::Integer)::Vector{Parameter}
+    add_parameters(model::JuMP.Model, N::Integer)::Vector{ParameterRef}
 
 Adds `N` parameters to the model, all of them fixed in zero.
 """
-function Parameters(model::JuMP.Model, N::Integer)
-    return Parameters(model::JuMP.Model, zeros(N))
+function add_parameters(model::JuMP.Model, N::Integer)
+    return add_parameters(model::JuMP.Model, zeros(N))
 end
-function Parameters(model::JuMP.Model, val::AbstractArray{R,N}) where {R,N}
+function add_parameters(model::JuMP.Model, val::AbstractArray{R,N}) where {R,N}
     params = _getparamdata(model)::ParameterData
 
     nparam = length(val)
-    out = Parameter[]
-    out = similar(val, Parameter)
+    out = ParameterRef[]
+    out = similar(val, ParameterRef)
     sizehint!(out, nparam)
     _addsizehint!(params.inds, nparam)
     _addsizehint!(params.current_values, nparam)
@@ -208,7 +228,7 @@ function Parameters(model::JuMP.Model, val::AbstractArray{R,N}) where {R,N}
 
         params.constraints_map[ind] = ParametrizedConstraintRef[]
 
-        out[i] = Parameter(ind, model)
+        out[i] = ParameterRef(ind, model)
     end
 
     return out
@@ -301,6 +321,11 @@ include("variable_interface.jl")
 # ------------------------------------------------------------------------------
 include("operators.jl")
 include("mutable_arithmetics.jl")
+
+
+# other
+# ------------------------------------------------------------------------------
+include("macros.jl")
 include("print.jl")
 
 end
