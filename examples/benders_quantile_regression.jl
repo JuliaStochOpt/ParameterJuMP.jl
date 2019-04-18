@@ -13,7 +13,7 @@
 
 #' # Introduction
 
-#' This notebook is parte of the talk on ParameterJuMP.jl in the
+#' This notebook is part of the talk on ParameterJuMP.jl in the
 #' third annual JuMP-dev workshop, held in Santiago, Chile, 2019
 
 #' The main purpose of this notebook is to show an application of
@@ -21,8 +21,8 @@
 #' ParameterJuMP is well suited for Benders like decompositions
 #' therefore we shall try to demonstrate the usage of the library
 #' in one of the simplest problems that fits in the Benders
-#' decomposition framework. Norm-1 regression, which is a particular
-#' case of quantile regression is one of such problems.
+#' decomposition framework, Norm-1 regression, which is a particular
+#' case of quantile regression.
 #'
 #' Note that this is NOT the standard technique to solve Norm-1
 #' regressions. Taylor made methods are available
@@ -38,7 +38,7 @@ using ParameterJuMP
 #' JuMP: the julia mathematical programming modeling tool
 using JuMP
 
-#' GLPK: A linear programing solver (other solvers could be used - 
+#' GLPK: A linear programming solver (other solvers could be used -
 #' such as Clp, Xpress, Gurobi, CPLEX and so on)
 
 #+ echo = false
@@ -69,7 +69,7 @@ gr(); # plotting backend
 #' In other words, given a set of $n$ explanatory variables $X = \{ X_1, \dots, X_n \}$
 #' we would like to obtain the best possible estimate for $Y$.
 #' In order to accomplish such a task we make the hypothesis that $Y$
-#' is aapproximately linear function of $X$:
+#' is approximately linear function of $X$:
 #'
 #' $Y = \sum_{j =1}^n \beta_j X_j + \varepsilon$
 #'
@@ -144,7 +144,7 @@ plot!(plt, time, X'[:,1])
 plot!(plt, time, X'[:,3])
 plot!(plt, time, X'[:,9])
 
-#' The classic tool to estimate linear regression models is the 
+#' The classic tool to estimate linear regression models is the
 #' [Least Squares](https://en.wikipedia.org/wiki/Least_squares) method.
 #'
 #' The least squares method relies on solving the optimization problem:
@@ -208,13 +208,13 @@ function full_model_regression()
     return nothing
 end
 
-#' Now we execute the functionthat builds the model and solves it
+#' Now we execute the function that builds the model and solves it
 
 N_Observations*N_Candidates < 10_000_000 && full_model_regression()
 
-#' # Benders decompositon
+#' # Benders decomposition
 
-#' Benders decompostions is used to solve large optimization problems
+#' Benders decomposition is used to solve large optimization problems
 #' with some special characteristics.
 #' LP's can be solved with classical linear optimization methods
 #' such as the Simplex method or Interior point methods provided by
@@ -267,7 +267,7 @@ N_Observations*N_Candidates < 10_000_000 && full_model_regression()
 #' The $z_k(x)$ function represents the cost of the subproblem given a
 #' solution for $x$. This function is a convex function because $x$
 #' affects only the right hand side of the problem (this is a standard
-#' resutls in LP theory).
+#' results in LP theory).
 #'
 #' For the special case of the Norm-1 reggression the problem is written as:
 #'
@@ -294,7 +294,7 @@ end
 #'
 #' At this point we make a small detour to highlight the ParameterJuMP
 #' application. Every time you a find a IF block with the flag `PARAM`
-#' it means that we have two different implmentatins of the method:
+#' it means that we have two different implementations of the method:
 #' one relying on ParameterJuMP and the other using pure JuMP.
 #'
 #'
@@ -321,8 +321,8 @@ function slave_model(PARAM, K)
     # create the regression coefficient representation
     if PARAM
         # here is the main constructor of the Parameter JuMP packages
-        # it will create model *parameters* instead of variables
-        # variables are added to the optimization model, while parameters
+        # It will create model *parameters* instead of variables
+        # Variables are added to the optimization model, while parameters
         # are not. Parameters are merged with LP problem constants and do not
         # increase the model dimensions.
         β = add_parameters(slave, zeros(N_Candidates))
@@ -336,7 +336,7 @@ function slave_model(PARAM, K)
     end
 
     # create local constraints
-    # note that *parameter* algebra is implemented just like variables
+    # Note that *parameter* algebra is implemented just like variables
     # algebra. We can multiply parameters by constants, add parameters,
     # sum parameters and varaibles and so on.
     @constraints(slave, begin
@@ -372,11 +372,11 @@ end
 #'\end{align}
 #' $$
 #'
-#' However we cannot pass a problem in this for to a linear programming
+#' However we cannot pass a problem in this form to a linear programming
 #' solver (it could be passed to other kinds of solvers).
 #'
 #' Another standart result of optimization theory is that a convex function
-#' an be represented by its supporting hyper-planes:
+#' can be represented by its supporting hyper-planes:
 #'
 #' $$
 #'\begin{align}
@@ -400,7 +400,7 @@ end
 #'
 #' However, it has infinitely many constraints !!!
 #'
-#' We can relax thhe infinite constraints and write:
+#' We can relax the infinite constraints and write:
 #'
 #' $$
 #'\begin{align}
@@ -420,7 +420,7 @@ end
 #'\end{align}
 #' $$
 #'
-#' This model can be written in JUMP
+#' This model can be written in JuMP
 #'
 
 function master_model(PARAM)
@@ -456,13 +456,13 @@ end
 #'
 #' Now we can:
 #' - Fix the values of $\hat{x}$ in the slave problems
-#' - Solve the slave problem
-#' - query the solution of the slave problem to obtain the supporting hyperplane
+#' - Solve the slave problems
+#' - query the solution of the slave problems to obtain the supporting hyperplane
 #'
-#' the value of $z_k(\hat{x})$, which is the objectie value of the slave problem
+#' the value of $z_k(\hat{x})$, which is the objective value of the slave problem
 #'
 #' and the derivative $\pi_k(\hat{x}) = \frac{d z_k(x)}{d x} \Big|_{x = \hat{x}}$
-#' the derivative is the dual variable associated to the variable $\hat{x}$,
+#' The derivative is the dual variable associated to the variable $\hat{x}$,
 #' which results by applying the chain rule on the constraints duals.
 #'
 #' These new steps are executed by the function:
@@ -488,7 +488,7 @@ function slave_solve(PARAM, model, master_solution)
     @timeit "opt" optimize!(slave)
 
     # query dual variables, which are sensitivities
-    # they represent the subgradient (almost a derivative)
+    # They represent the subgradient (almost a derivative)
     # of the objective function for infinitesimal variations
     # of the constants in the linear constraints
     @timeit "dual" if PARAM
@@ -549,7 +549,7 @@ function decomposed_model(PARAM)
     time_init = @elapsed @timeit "Init" begin
         println("Initialize decomposed model")
 
-        # Create the mastter problem with no cuts
+        # Create the master problem with no cuts
         println("Build master problem")
         @timeit "Master" master = master_model(PARAM)
 
@@ -580,11 +580,11 @@ function decomposed_model(PARAM)
         end
 
         # Solve the master problem with the new set of cuts
-        # obtain new solution candidate for the regression coefficients
+        # Obtain new solution candidate for the regression coefficients
         @timeit "solve master" solution = master_solve(PARAM, master)
 
         # Pass the new candidate solution to each of the slave problems
-        # Solve the slave problems and obtain cuttin planes
+        # Solve the slave problems and obtain cutting planes
         # @show solution[2]
         @timeit "solve nodes" for i ∈ Candidates
             cuts[i] = slave_solve(PARAM, slaves[i], solution)
