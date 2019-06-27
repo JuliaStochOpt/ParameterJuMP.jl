@@ -182,8 +182,20 @@ function _update_constraints(data::ParameterData)
 end
 
 function _update_constraints(data::ParameterData, ::Type{S}) where S
-    for (cref, gaep) in _get_param_dict(data, S)
-        _update_constraint(data, cref, gaep)
+    dict = _get_param_dict(data, S)
+    to_delete = eltype(keys(dict))[]
+    for (cref, gaep) in
+        if is_valid(cref.model, cref)
+            _update_constraint(data, cref, gaep)
+        else
+            # The constraint has been deleted. We cannot keep `dict` in sync
+            # with deletions as we return a `JuMP.ConstraintRef`, not a custom
+            # type when the user create a parametrized constraint.
+            push!(to_delete, cref)
+        end
+    end
+    for cref in to_delete
+        JuMP.delete(cref.model, cref)
     end
     return nothing
 end
@@ -369,7 +381,7 @@ function delete_from_constraints(::Type{S}, p::ParameterRef) where S
         end
     end
     if lazy_duals(data)
-        if !isempty(data.constraints_map[ind]) 
+        if !isempty(data.constraints_map[ind])
             data.constraints_map[ind] = ParametrizedConstraintRef[]
             if !iszero(data.future_values[ind])
                 data.sync = false
