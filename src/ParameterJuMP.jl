@@ -287,8 +287,30 @@ function initialize_parameter_data(m::JuMP.Model)
     m.ext[:params] = ParameterData()
 end
 
+# The constraint has been deleted. We cannot keep `dict` in sync with deletions
+# as we return a `JuMP.ConstraintRef`, not a custom type when the user create a
+# parametrized constraint.
+function _update_dicts_with_deletion(data::ParameterData, S::Type)
+    dict = _get_param_dict(data, S)
+    to_delete = eltype(keys(dict))[]
+    for (cref, gaep) in dict
+        if !JuMP.is_valid(cref.model, cref)
+            push!(to_delete, cref)
+        end
+    end
+    for cref in to_delete
+        delete!(dict, cref)
+    end
+end
+function _update_dicts_with_deletion(data::ParameterData)
+    _update_dicts_with_deletion(data, EQ)
+    _update_dicts_with_deletion(data, LE)
+    _update_dicts_with_deletion(data, GE)
+end
 function parameter_optimizehook(m::JuMP.Model; kwargs...)
     data = _getparamdata(m)::ParameterData
+
+    _update_dicts_with_deletion(data)
 
     # sync model rhs to newest parameter values
     sync(data)

@@ -460,3 +460,26 @@ function test15(args...)
         @test_expression_with_string a + b - x + y + 1.2 "y - x + a + b + 1.2"
     end
 end
+
+function test16(args...)
+    @testset "Test deletion of constraint" begin
+        model = ModelWithParams(args...)
+        α = add_parameter(model, -1.0)
+        @variable(model, x)
+        cref1 = @constraint(model, x ≤ α/2)
+        cref2 = @constraint(model, x ≤ α)
+        cref3 = @constraint(model, x ≤ 2α)
+        @objective(model, Max, x)
+        JuMP.delete(model, cref3)
+        JuMP.optimize!(model)
+        @test JuMP.value(x) == -1.0
+        @test JuMP.dual(cref1) == 0.0
+        @test JuMP.dual(cref2) == -1.0
+        @test JuMP.dual(α) == -1.0
+        JuMP.delete(model, cref2)
+        JuMP.optimize!(model)
+        @test JuMP.value(x) == -0.5
+        @test JuMP.dual(cref1) == -1.0
+        @test JuMP.dual(α) == -0.5
+    end
+end
