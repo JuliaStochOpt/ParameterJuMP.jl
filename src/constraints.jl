@@ -369,7 +369,7 @@ function delete_from_constraints(::Type{S}, p::ParameterRef) where S
         end
     end
     if lazy_duals(data)
-        if !isempty(data.constraints_map[ind]) 
+        if !isempty(data.constraints_map[ind])
             data.constraints_map[ind] = ParametrizedConstraintRef[]
             if !iszero(data.future_values[ind])
                 data.sync = false
