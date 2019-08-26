@@ -15,8 +15,6 @@ addons:
         - liblapack-dev
         - libgmp-dev
         - libglpk-dev
-before_script:
-    - julia -e 'using Pkg; Pkg.add(PackageSpec(name="JuMP", rev="master"))'
 after_success:
     - echo $TRAVIS_JULIA_VERSION
     # push coverage results to Codecov
