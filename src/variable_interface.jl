@@ -5,10 +5,6 @@
 # main interface
 
 JuMP.is_fixed(p::ParameterRef) = true
-JuMP.fix_index(p::ParameterRef) =
-    error("Parameters do not have have explicit constraints, hence no constraint index.")
-JuMP.set_fix_index(p::ParameterRef, cindex) =
-    error("Parameters do not have have explicit constraints, hence no constraint index.")
 JuMP.FixRef(p::ParameterRef) =
     error("Parameters do not have have explicit constraints, hence no constraint reference.")
 JuMP.unfix(p::ParameterRef) = error("Parameters cannot be unfixed.")
@@ -123,10 +119,6 @@ end
 JuMP.has_lower_bound(p::ParameterRef) = false
 JuMP.LowerBoundRef(p::ParameterRef) =
     error("Parameters do not have bounds.")
-JuMP.lower_bound_index(p::ParameterRef) =
-    error("Parameters do not have bounds.")
-JuMP.set_lower_bound_index(p::ParameterRef, cindex) =
-    error("Parameters do not have bounds.")
 JuMP.set_lower_bound(p::ParameterRef, lower::Number) =
     error("Parameters do not have bounds.")
 JuMP.delete_lower_bound(p::ParameterRef) =
@@ -137,10 +129,6 @@ JuMP.lower_bound(p::ParameterRef) =
 JuMP.has_upper_bound(p::ParameterRef) = false
 JuMP.UpperBoundRef(p::ParameterRef) =
     error("Parameters do not have bounds.")
-JuMP.upper_bound_index(p::ParameterRef) =
-    error("Parameters do not have bounds.")
-JuMP.set_upper_bound_index(p::ParameterRef, cindex) =
-    error("Parameters do not have bounds.")
 JuMP.set_upper_bound(p::ParameterRef, lower::Number) =
     error("Parameters do not have bounds.")
 JuMP.delete_upper_bound(p::ParameterRef) =
@@ -149,10 +137,6 @@ JuMP.upper_bound(p::ParameterRef) =
     error("Parameters do not have bounds.")
 
 JuMP.is_integer(p::ParameterRef) = false
-JuMP.integer_index(p::ParameterRef) =
-    error("Parameters do not have integrality constraints.")
-JuMP.set_integer_index(p::ParameterRef, cindex) =
-    error("Parameters do not have integrality constraints.")
 JuMP.set_integer(p::ParameterRef) =
     error("Parameters do not have integrality constraints.")
 JuMP.unset_integer(p::ParameterRef) =
@@ -161,10 +145,6 @@ JuMP.IntegerRef(p::ParameterRef) =
     error("Parameters do not have integrality constraints.")
 
 JuMP.is_binary(p::ParameterRef) = false
-JuMP.binary_index(p::ParameterRef) =
-    error("Parameters do not have binary constraints.")
-JuMP.set_binary_index(p::ParameterRef, cindex) =
-    error("Parameters do not have binary constraints.")
 JuMP.set_binary(p::ParameterRef) =
     error("Parameters do not have binary constraints.")
 JuMP.unset_binary(p::ParameterRef) =
