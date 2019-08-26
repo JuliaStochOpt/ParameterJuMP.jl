@@ -131,16 +131,10 @@ end
 # Build constraint
 # ------------------------------------------------------------------------------
 
-# TODO should be in MOI, MOIU or JuMP
-_shift_constant(set::S, offset) where S <: Union{MOI.LessThan,MOI.GreaterThan,MOI.EqualTo} = S(MOIU.getconstant(set) + offset)
-function _shift_constant(set::MOI.Interval, offset)
-    MOI.Interval(set.lower + offset, set.upper + offset)
-end
-
 function JuMP.build_constraint(_error::Function, aff::PAE, set::S) where S <: Union{MOI.LessThan,MOI.GreaterThan,MOI.EqualTo}
     offset = aff.v.constant
     aff.v.constant = 0.0
-    shifted_set = _shift_constant(set, -offset)
+    shifted_set = MOIU.shift_constant(set, -offset)
     return JuMP.ScalarConstraint(aff, shifted_set)
 end
 
@@ -200,13 +194,7 @@ end
 
 function _update_constraint(data::ParameterData, cref, val::Number)
     if !iszero(val)
-        ci = JuMP.index(cref)
-        old_set = MOI.get(cref.model.moi_backend, MOI.ConstraintSet(), ci)
-        # For scalar constraints, the constant in the function is zero and the
-        # constant is stored in the set. Since `pcr.coef` corresponds to the
-        # coefficient in the function, we need to take `-pcr.coef`.
-        new_set = _shift_constant(old_set, -val)
-        MOI.set(cref.model.moi_backend, MOI.ConstraintSet(), ci, new_set)
+        JuMP.add_to_function_constant(cref, val)
     end
     return nothing
 end
