@@ -16,6 +16,7 @@ function test0(args...)
         @test [-35/3, 0.0] ≈ JuMP.dual.(x) atol=1e-3
         @test [-26/3, 0.0, 0.0, 0.0, 0.0, 0.0] ≈ JuMP.value.(y) atol=1e-3
         @test -130/3 ≈ JuMP.objective_value(m_slave) atol=1e-3
+        @test parametrized_dual_objective_value(m_slave) ≈ -35/3 * x[1] + 10/3 atol=1e-3
     end
 end
 
@@ -45,6 +46,7 @@ function test1(args...)
         @test [0.0, 0.0, -35/3, 0.0, 0.0, 0.0] ≈ JuMP.JuMP.dual.(x) atol=1e-3
         @test [-26/3, 0.0, 0.0, 0.0, 0.0, 0.0] ≈ JuMP.JuMP.value.(y) atol=1e-3
         @test -130/3 ≈ JuMP.objective_value(m_slave) atol=1e-3
+        @test parametrized_dual_objective_value(m_slave) ≈ -35/3 * x[3] + 10/3 atol=1e-3
     end
 end
 
@@ -60,12 +62,14 @@ function test2(args...)
         @test JuMP.value(x) == -1.0
         @test JuMP.dual(cref) == -1.0
         @test JuMP.dual(α) == -1.0
+        @test parametrized_dual_objective_value(model) ≈ -α - 2 atol=1e-3
 
         fix(α, 2.0)
         JuMP.optimize!(model)
         @test JuMP.value(x) == 2.0
         @test JuMP.dual(cref) == -1.0
         @test JuMP.dual(α) == -1.0
+        @test parametrized_dual_objective_value(model) ≈ -α + 4 atol=1e-3
     end
 end
 
@@ -81,12 +85,14 @@ function test3(args...)
         @test JuMP.value(x) == -1.0
         @test JuMP.dual(cref) == -1.0
         @test JuMP.dual(α) == -1.0
+        @test parametrized_dual_objective_value(model) ≈ -α - 2 atol=1e-3
 
         fix(α, 2.0)
         JuMP.optimize!(model)
         @test JuMP.value(x) == 2.0
         @test JuMP.dual(cref) == -1.0
         @test JuMP.dual(α) == -1.0
+        @test parametrized_dual_objective_value(model) ≈ -α + 4 atol=1e-3
     end
 end
 
@@ -102,12 +108,14 @@ function test4(args...)
         @test JuMP.value(x) == -1.0
         @test JuMP.dual(cref) == 1.0
         @test JuMP.dual(α) == 1.0
+        @test parametrized_dual_objective_value(model) ≈ 1α
 
         fix(α, 2.0)
         JuMP.optimize!(model)
         @test JuMP.value(x) == 2.0
         @test JuMP.dual(cref) == 1.0
         @test JuMP.dual(α) == 1.0
+        @test parametrized_dual_objective_value(model) ≈ 1α
     end
 end
 
@@ -122,6 +130,7 @@ function test5(args...)
         @test JuMP.value(x) == 20.0
         @test JuMP.dual(cref) == 1.0
         @test JuMP.dual(α[3]) == 2.0
+        @test parametrized_dual_objective_value(model) ≈ 2sum(α)
     end
 end
 
@@ -136,6 +145,7 @@ function test6(args...)
         @test JuMP.value(x) == 2.0
         @test JuMP.dual(cref) == 1/5
         @test JuMP.dual(α[3]) == 2/5
+        @test parametrized_dual_objective_value(model) ≈ 2/5 * sum(α)
     end
 end
 
@@ -150,6 +160,7 @@ function test7(args...)
         @test JuMP.value(x) == 2.0
         @test JuMP.dual(cref) == 1/5
         @test JuMP.dual(α[3]) == 2/5
+        @test parametrized_dual_objective_value(model) ≈ 2/5 * sum(α)
     end
 end
 
@@ -164,6 +175,7 @@ function test8(args...)
         @test JuMP.value(x) == 4.0
         @test JuMP.dual(cref) == 1/5
         @test JuMP.dual(α[3]) == 2/5
+        @test parametrized_dual_objective_value(model) ≈ 2/5 * sum(α) + 2
     end
 end
 
@@ -202,6 +214,7 @@ function test10(args...)
         @test JuMP.value(x) == -1.0
         @test JuMP.dual(cref) == -1.0
         @test JuMP.dual(α) == -1.0
+        @test parametrized_dual_objective_value(model) ≈ -α - 2
 
         b = add_parameter(model, -2.0)
         @test all_parameters(model) == [α, b]
@@ -210,6 +223,8 @@ function test10(args...)
         @test JuMP.value(x) == -2.0
         @test JuMP.dual(cref) == -1.0
         @test JuMP.dual(α) == 0.0
+        @test JuMP.dual(b) == -1.0
+        @test parametrized_dual_objective_value(model) ≈ -b - 4
     end
 end
 
@@ -224,12 +239,14 @@ function test11(args...)
         @test JuMP.value(x) == 0.0
         @test JuMP.dual(cref) == -1.0
         @test JuMP.dual(α) == 0.0
+        @test parametrized_dual_objective_value(model) ≈ 0α
 
         set_coefficient(cref, α, 1.0)
         JuMP.optimize!(model)
         @test JuMP.value(x) == -1.0
         @test JuMP.dual(cref) == -1.0
         @test JuMP.dual(α) == 1.0
+        @test parametrized_dual_objective_value(model) ≈ α - 2
     end
     @testset "Change coefficient" begin
         model = ModelWithParams(args...)
@@ -242,12 +259,14 @@ function test11(args...)
         @test JuMP.value(x) == -1.0
         @test JuMP.dual(cref) == 1.0
         @test JuMP.dual(α) == 1.0
+        @test parametrized_dual_objective_value(model) ≈ 1α
 
         ParameterJuMP.set_coefficient(cref, α, -2.0)
         JuMP.optimize!(model)
         @test JuMP.value(x) == -2.0
         @test JuMP.dual(cref) == 1.0
         @test JuMP.dual(α) == 2.0
+        @test parametrized_dual_objective_value(model) ≈ 2α
     end
     @testset "Set coefficient with lazy" begin
         model = ModelWithParams(args...)
@@ -260,12 +279,14 @@ function test11(args...)
         @test JuMP.value(x) == 0.0
         @test JuMP.dual(cref) == -1.0
         @test JuMP.dual(α) == 0.0
+        @test parametrized_dual_objective_value(model) ≈ 0α
 
         set_coefficient(cref, α, 1.0)
         JuMP.optimize!(model)
         @test JuMP.value(x) == -1.0
         @test JuMP.dual(cref) == -1.0
         @test JuMP.dual(α) == 1.0
+        @test parametrized_dual_objective_value(model) ≈ α - 2
     end
     @testset "Set coefficient with lazy 2" begin
         model = ModelWithParams(args...)
@@ -279,12 +300,16 @@ function test11(args...)
         @test JuMP.value(x) == 0.0
         @test JuMP.dual(cref) == -1.0
         @test JuMP.dual(α) == 0.0
+        @test JuMP.dual(b) == -1.0
+        @test parametrized_dual_objective_value(model) ≈ -b
 
         set_coefficient(cref, α, 1.0)
         JuMP.optimize!(model)
         @test JuMP.value(x) == -1.0
         @test JuMP.dual(cref) == -1.0
         @test JuMP.dual(α) == 1.0
+        @test JuMP.dual(b) == -1.0
+        @test parametrized_dual_objective_value(model) ≈ α - b - 2
     end
 end
 
@@ -300,12 +325,14 @@ function test12(args...)
         @test JuMP.value(x) == -1.0
         @test JuMP.dual(cref) == 1.0
         @test JuMP.dual(α) == 1.0
+        @test parametrized_dual_objective_value(model) ≈ 1α
 
         ParameterJuMP.delete_from_constraint(cref, α)
         JuMP.optimize!(model)
         @test JuMP.value(x) == 0.0
         @test JuMP.dual(cref) == 1.0
         @test JuMP.dual(α) == 0.0
+        @test parametrized_dual_objective_value(model) ≈ 0α
     end
     @testset "Remove parameter from all constraint" begin
         model = ModelWithParams(args...)
@@ -318,12 +345,14 @@ function test12(args...)
         @test JuMP.value(x) == -1.0
         @test JuMP.dual(cref) == 1.0
         @test JuMP.dual(α) == 1.0
+        @test parametrized_dual_objective_value(model) ≈ 1α
 
         ParameterJuMP.delete_from_constraints(α)
         JuMP.optimize!(model)
         @test JuMP.value(x) == 0.0
         @test JuMP.dual(cref) == 1.0
         @test JuMP.dual(α) == 0.0
+        @test parametrized_dual_objective_value(model) ≈ 0α
     end
 end
 
@@ -442,6 +471,7 @@ function test15(args...)
         @test JuMP.value(x) == -1.0
         @test JuMP.dual(cref) == -1.0
         @test JuMP.dual(α) == -1.0
+        @test parametrized_dual_objective_value(model) ≈ -α - 2
     end
 end
 
@@ -476,10 +506,13 @@ function test16(args...)
         @test JuMP.dual(cref1) == 0.0
         @test JuMP.dual(cref2) == -1.0
         @test JuMP.dual(α) == -1.0
+        @test parametrized_dual_objective_value(model) ≈ -α - 2
+
         JuMP.delete(model, cref2)
         JuMP.optimize!(model)
         @test JuMP.value(x) == -0.5
         @test JuMP.dual(cref1) == -1.0
         @test JuMP.dual(α) == -0.5
+        @test parametrized_dual_objective_value(model) ≈ -0.5α - 1
     end
 end

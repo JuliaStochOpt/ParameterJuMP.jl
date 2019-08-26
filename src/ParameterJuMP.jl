@@ -9,7 +9,7 @@ const MOI = MathOptInterface
 const MOIU = MOI.Utilities
 
 export
-ModelWithParams, ParameterRef, add_parameter, add_parameters, all_parameters, Param
+ModelWithParams, ParameterRef, add_parameter, add_parameters, all_parameters, Param, parametrized_dual_objective_value
 
 # types
 # ------------------------------------------------------------------------------
@@ -345,9 +345,9 @@ end
 function parametrized_dual_objective_value(model::JuMP.AbstractModel)
     params = all_parameters(model)
     linear = [param => dual(param) for param in params]
-    obj = objective_value(model) # TODO replace by `dual_objective_value`, see https://github.com/JuliaOpt/MathOptInterface.jl/pull/473
+    obj = dual_objective_value(model)
     constant = obj - sum(value(term.first) * term.second for term in linear)
-    return GenericAffExpr(constant, [param[i] => π[i] for i in 1:eachindex(params)])
+    return GenericAffExpr(constant, linear)
 end
 
 # constraints

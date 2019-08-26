@@ -87,6 +87,31 @@ function JuMP.isequal_canonical(aff::DGAE{C,V,P}, other::DGAE{C,V,P}) where {C,V
     # This is the current behavior, but it seems questionable.
     return isequal(aff_nozeros, other_nozeros)
 end
+function Base.isapprox(x::GAEp, y::GAEp; kws...)
+    if !isapprox(x.constant, y.constant; kws...)
+        return false
+    end
+    x = dropzeros(x)
+    y = dropzeros(y)
+    if length(linear_terms(x)) != length(linear_terms(y))
+        return false
+    end
+    for (coef, var) in linear_terms(x)
+        c = get(y.terms, var, nothing)
+        if c === nothing
+            return false
+        elseif !isapprox(coef, c; kws...)
+            return false
+        end
+    end
+    return true
+end
+function Base.isapprox(x::GAEp, y::PAE; kws...)
+    return isapprox(x, y.p + y.v.constant; kws...)
+end
+function Base.isapprox(x::PAE, y::GAEp; kws...)
+    return isapprox(y, x; kws...)
+end
 
 Base.convert(::Type{PAE{C}}, v::JuMP.VariableRef) where {C} = PAE{C}(GAEv{C}(zero(C), v => one(C)), zero(GAEp{C}))
 Base.convert(::Type{PAE{C}}, p::ParameterRef) where {C} = PAE{C}(zero(GAEv{C}), GAEp{C}(zero(C), p => one(C)))
