@@ -442,6 +442,8 @@ function test14(args...)
         @test_expression_with_string b - a - 1.2 "b - a - 1.2"
         # var + par + num
         @test_expression_with_string x + a + 1.2 "x + a + 1.2"
+        # var + par + num * num
+        @test_expression_with_string x + a + 1.2 * 2.0 "x + a + 2.4"
         # var + var + par + num
         @test_expression_with_string x + y + a + 1.2 "x + y + a + 1.2"
         # var + var - par + num

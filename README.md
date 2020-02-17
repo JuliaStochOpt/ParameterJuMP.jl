@@ -84,7 +84,7 @@ We can also solve it for different values of `a`.
 
 ```julia
 # Create a JuMP model able to handle parameters
-model = ModelWithParams(with_optimizer(SOME_SOLVER.Optimizer))
+model = ModelWithParams(SOME_SOLVER.Optimizer)
 
 # Create a regular JuMP variable
 @variable(model, x)
@@ -147,7 +147,7 @@ One example in pure JuMP goes as follows:
 
 ```julia
 # create a regular JuMP Model
-model_pure = Model(with_optimizer(SOME_SOLVER.Optimizer))
+model_pure = Model(SOME_SOLVER.Optimizer)
 
 # add optimization variables
 @variable(model_pure, x[1:N] >= 0)
@@ -191,7 +191,7 @@ The same example of the motivation can be written with **parameters**:
 
 ```julia
 # create a regular JuMP Model
-model_pure = Model(with_optimizer(SOME_SOLVER.Optimizer))
+model_pure = Model(SOME_SOLVER.Optimizer)
 
 # add optimization variables
 @variable(model_pure, x[1:N] >= 0)
