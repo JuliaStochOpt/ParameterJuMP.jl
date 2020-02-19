@@ -2,6 +2,9 @@ module ParameterJuMP
 
 using SparseArrays
 
+import MutableArithmetics
+const MA = MutableArithmetics
+
 using JuMP
 export index
 using MathOptInterface
@@ -259,7 +262,7 @@ to the regular `Model` constructor.
 Example using GLPK solver:
 
 ```julia
-    model = ModelWithParams(with_optimizer(GLPK.Optimizer))
+model = ModelWithParams(GLPK.Optimizer)
 ```
 """
 function ModelWithParams(args...; kwargs...)

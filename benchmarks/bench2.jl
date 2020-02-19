@@ -70,7 +70,7 @@ end
 =#
 
 function bench_create_param(N_Parameters::Int, N_Variables::Int, N_Constraints::Int)
-    model = ModelWithParams(with_optimizer(GLPK.Optimizer))
+    model = ModelWithParams(GLPK.Optimizer)
     @timeit to "create params" x = add_parameters2(model, N_Parameters)
     @timeit to "create vars" y = add_variables(model, N_Variables)
 

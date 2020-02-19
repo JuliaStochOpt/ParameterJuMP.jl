@@ -100,6 +100,7 @@ Base.:(-)(lhs::GAEp{C}, rhs::GAEv{C}) where {C} = (+)(-rhs,lhs)
 # DONE in JuMP
 
 # GenericAffExpr{C,ParameterRef}--PAE{C}
+Base.:(+)(lhs::GAEp{C}, rhs::PAE{C}) where {C} = PAE{C}(rhs.v, lhs + rhs.p)
 
 #=
     PAE{C}

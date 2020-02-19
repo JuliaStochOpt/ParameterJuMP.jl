@@ -8,7 +8,7 @@ using Profile
 using ProfileView
 
 function bench1_p(N::Int, M::Int)
-    m_slave = ModelWithParams(with_optimizer(GLPK.Optimizer))
+    m_slave = ModelWithParams(GLPK.Optimizer)
 
     x = add_parameters(m_slave, 4.0*ones(M))
     @variable(m_slave, y[1:N])
@@ -20,7 +20,7 @@ function bench1_p(N::Int, M::Int)
     end
 end
 function bench1_v(N::Int, M::Int)
-    m_slave = Model(with_optimizer(GLPK.Optimizer))
+    m_slave = Model(GLPK.Optimizer)
 
     @variable(m_slave, x[1:M] == 4.0)
     @variable(m_slave, y[1:N])
@@ -32,7 +32,7 @@ function bench1_v(N::Int, M::Int)
     end
 end
 function bench2_p(N::Int)
-    m_slave = ModelWithParams(with_optimizer(GLPK.Optimizer))
+    m_slave = ModelWithParams(GLPK.Optimizer)
 
     x = add_parameters(m_slave, 4.0*ones(N))
     @variable(m_slave, y[1:N])
@@ -44,7 +44,7 @@ function bench2_p(N::Int)
     end
 end
 function bench2_v(N::Int)
-    m_slave = Model(with_optimizer(GLPK.Optimizer))
+    m_slave = Model(GLPK.Optimizer)
 
     @variable(m_slave, x[1:N] == 4.0)
     @variable(m_slave, y[1:N])
