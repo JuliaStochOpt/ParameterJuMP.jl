@@ -25,7 +25,7 @@ To enable the usage of ParameterJuMP the optimization model must
 be constructed with the function:
 
 ```julia
-ModelWithParam(args...)
+ModelWithParams(args...)
 ```
 
 Which can receive the same inputs as the original `Model` constructor,
