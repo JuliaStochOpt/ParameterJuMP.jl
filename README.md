@@ -110,10 +110,10 @@ optimize!(model)
 
 ## Installation
 
-Currently ParameterJuMP works with Julia 1.x and JuMP 0.19.x
+Currently ParameterJuMP works with Julia 1.x and JuMP 0.21.x
 
 - type `]` to go to the package manager
-- type `add https://github.com/JuliaStochOpt/ParameterJuMP.jl` (because its currently not registered)
+- type `add ParameterJuMP`
 
 ## Motivation
 
