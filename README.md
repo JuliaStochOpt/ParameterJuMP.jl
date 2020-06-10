@@ -25,7 +25,7 @@ To enable the usage of ParameterJuMP the optimization model must
 be constructed with the function:
 
 ```julia
-ModelWithParam(args...)
+ModelWithParams(args...)
 ```
 
 Which can receive the same inputs as the original `Model` constructor,
@@ -110,10 +110,10 @@ optimize!(model)
 
 ## Installation
 
-Currently ParameterJuMP works with Julia 1.x and JuMP 0.19.x
+Currently ParameterJuMP works with Julia 1.x and JuMP 0.21.x
 
 - type `]` to go to the package manager
-- type `add https://github.com/JuliaStochOpt/ParameterJuMP.jl` (because its currently not registered)
+- type `add ParameterJuMP`
 
 ## Motivation
 
@@ -190,26 +190,26 @@ real need!!!
 The same example of the motivation can be written with **parameters**:
 
 ```julia
-# create a regular JuMP Model
-model_pure = Model(SOME_SOLVER.Optimizer)
+# create a ParameterJuMP Model
+model_param = ModelWithParams(SOME_SOLVER.Optimizer)
 
 # add optimization variables
-@variable(model_pure, x[1:N] >= 0)
+@variable(model_param, x[1:N] >= 0)
 
 # add dummy fixed variables
-y = [add_parameter(model_pure, value_for_y[i]) for i in 1:M]
+y = [add_parameter(model_param, value_for_y[i]) for i in 1:M]
 # or
-# y = add_parameters(model_pure, value_for_y)
+# y = add_parameters(model_param, value_for_y)
 
 # add constraints
-@constraint(model_pure, ctr[k in 1:P],
+@constraint(model_param, ctr[k in 1:P],
     sum(A[i,k]*x[i] for i in 1:N) == b[k] - sum(D[j,k]*y[j] for j in 1:M))
 
 # create objective function
-@objective(model_pure, Min, sum(c[i]*x[i] for i in 1:N))
+@objective(model_param, Min, sum(c[i]*x[i] for i in 1:N))
 
 # solve problem
-optimize!(model_pure)
+optimize!(model_param)
 
 # query dual values
 y_duals = dual.(y)
@@ -218,7 +218,7 @@ y_duals = dual.(y)
 fix.(y, new_value_for_y)
 
 # solve problem (again)
-optimize!(model_pure)
+optimize!(model_param)
 
 # query dual values (again)
 y_duals = dual.(y)
