@@ -7,8 +7,8 @@
 
 A JuMP extension to use parameters in constraints constants.
 
-[build-img]: https://travis-ci.org/JuliaStochOpt/ParameterJuMP.jl.svg?branch=master
-[build-url]: https://travis-ci.org/JuliaStochOpt/ParameterJuMP.jl
+[build-img]: https://github.com/JuliaStochOpt/ParameterJuMP.jl/workflows/CI/badge.svg?branch=master
+[build-url]: https://github.com/JuliaStochOpt/ParameterJuMP.jl/actions?query=workflow%3ACI
 [codecov-img]: https://codecov.io/gh/JuliaStochOpt/ParameterJuMP.jl/branch/master/graph/badge.svg
 [codecov-url]: https://codecov.io/gh/JuliaStochOpt/ParameterJuMP.jl
 
@@ -112,8 +112,9 @@ optimize!(model)
 
 Currently ParameterJuMP works with Julia 1.x and JuMP 0.21.x
 
-- type `]` to go to the package manager
-- type `add ParameterJuMP`
+```julia
+import Pkg; Pkg.add("ParameterJuMP")
+```
 
 ## Motivation
 
