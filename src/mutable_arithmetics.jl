@@ -8,7 +8,7 @@
 function MA.mutable_operate!(
     op::MA.AddSubMul,
     aff::PAE,
-    x::Union{JuMP.VariableRef, GAEv, ParameterRef, GAEp},
+    x::Union{VariableRef,GAEv,ParameterRef,GAEp},
     c::Number,
 )
     return MA.mutable_operate!(op, aff, c, x)
@@ -18,7 +18,7 @@ function MA.mutable_operate!(
     op::MA.AddSubMul,
     aff::PAE,
     c::Number,
-    x::Union{JuMP.VariableRef, GAEv},
+    x::Union{VariableRef,GAEv},
 )
     if !iszero(c)
         MA.mutable_operate!(op, aff.v, c, x)
@@ -30,7 +30,7 @@ function MA.mutable_operate!(
     op::MA.AddSubMul,
     aff::PAE,
     c::Number,
-    x::Union{ParameterRef, GAEp},
+    x::Union{ParameterRef,GAEp},
 )
     if !iszero(c)
         MA.mutable_operate!(op, aff.p, c, x)
@@ -47,32 +47,33 @@ end
 
 # n-argument functions
 
-function MA.mutable_operate!(
-    op::MA.AddSubMul,
-    aff::PAE,
-    a::Number,
-    b::Number,
-    rhs::ParameterRef,
-)
-    c = a * b
-    if !iszero(c)
-        aff.p = MA.mutable_operate!(op, aff.p, c, rhs)
+_collect_args(v, p, c, x::Number) = v, p, c * x
+_collect_args(::Nothing, p::Nothing, c, x::Union{VariableRef,GAEv}) = x, p, c
+_collect_args(v::Nothing, ::Nothing, c, x::Union{ParameterRef,GAEp}) = v, x, c
+_collect_args(::Nothing, ::Nothing, c, x::PAE) = x.v, x.p, c
+
+function _collect_args(::Type{T}, args::Tuple) where {T}
+    v, p, c = nothing, nothing, one(T)
+    for arg in args
+        v, p, c = _collect_args(v, p, c, arg)
     end
-    return aff
+    return v, p, c
 end
 
 function MA.mutable_operate!(
     op::MA.AddSubMul,
-    aff::PAE,
-    rhs::PAE,
-    args::Number...
-)
-    c = prod(args)
-    if !iszero(c)
-        aff.p = MA.mutable_operate!(op, aff.p, c, rhs.p)
-        aff.v = MA.mutable_operate!(op, aff.v, c, rhs.v)
+    lhs::PAE{T},
+    args::Vararg{Any, N},
+) where {T,N}
+    v, p, c = _collect_args(T, args)
+    if v === nothing && p === nothing
+        MA.mutable_operate!(op, lhs.v, one(T), c)
+    elseif v !== nothing && !iszero(v)
+        MA.mutable_operate!(op, lhs.v, c, v)
+    elseif p !== nothing && !iszero(p)
+        MA.mutable_operate!(op, lhs.p, c, p)
     end
-    return aff
+    return lhs
 end
 
 ###
