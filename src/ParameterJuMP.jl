@@ -147,11 +147,12 @@ _get_param_dict(data::ParameterData, ::Type{GE}) = data.parameters_map_saf_in_ge
 
 _getmodel(p::ParameterRef) = p.model
 _getparamdata(p::ParameterRef)::ParameterData = _getparamdata(_getmodel(p))::ParameterData
-# _getparamdata(model::JuMP.Model) = model.ext[:params]::ParameterData
 function _getparamdata(model::JuMP.Model)::ParameterData
-    # TODO checks dict twice
-    !haskey(model.ext, :params) && error("In order to use Parameters the model must be created with the ModelWithParams constructor")
-    return model.ext[:params]
+    params = get(model.ext, :ParameterJuMP, nothing)
+    if params !== nothing
+        return params
+    end
+    return enable_parameters(model)
 end
 
 """
@@ -266,9 +267,8 @@ model = ModelWithParams(GLPK.Optimizer)
 ```
 """
 function ModelWithParams(args...; kwargs...)
-    m = JuMP.Model(args...; kwargs...)
-    enable_parameters(m)
-    return m
+    @warn("This function isn't needed anymore. Just use `JuMP.Model()` instead.")
+    return JuMP.Model(args...; kwargs...)
 end
 
 """
@@ -277,17 +277,15 @@ end
 Enables a `JuMP.Model` to handle `Parameters`.
 """
 function enable_parameters(m::JuMP.Model)
-    if haskey(m.ext, :params)
+    if haskey(m.ext, :ParameterJuMP)
         error("Model already has parameter enabled")
     end
-    # test and compare hook
-    initialize_parameter_data(m)
     JuMP.set_optimize_hook(m, parameter_optimizehook)
-    return nothing
+    return initialize_parameter_data(m)
 end
 
 function initialize_parameter_data(m::JuMP.Model)
-    m.ext[:params] = ParameterData()
+    return m.ext[:ParameterJuMP] = ParameterData()
 end
 
 # The constraint has been deleted. We cannot keep `dict` in sync with deletions

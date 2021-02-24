@@ -21,46 +21,37 @@ A JuMP extension to use parameters in constraints constants.
 ParameterJuMP adds new methods created on top of JuMP to use constant
 parameters in optimization problems.
 
-To enable the usage of ParameterJuMP the optimization model must
-be constructed with the function:
-
-```julia
-ModelWithParams(args...)
-```
-
-Which can receive the same inputs as the original `Model` constructor,
-and also returns the same `Model` type.
-
 The key constructor of ParameterJuMP is:
-
 ```julia
-add_parameter(model::JuMP.Model, value::Number)
+@variable(model, p == 1, Param())
 ```
-
-Which adds a parameter fixed at `value` to the JuMP model `model`.
+which adds a parameter `p` fixed at `value` to the JuMP model `model`.
 It is possible to create multiple parameters at the same time with:
 
 ```julia
-add_parameters(model::JuMP.Model, values::Vector{Number})
+@variable(model, p[i = 1:3] == i, Param())
 ```
-
-Which returns a vector of parameters.
+which returns a vector of parameters.
 
 It is possible to change the current value of a parameter with the
 function:
 
 ```julia
-fix(p::ParameterRef, new_value::Number)
+set_value(p::ParameterRef, new_value::Number)
+```
+and to query the current value of a parameter with `value`:
+```julia
+value(p::ParameterRef)
 ```
 
 Finally, the `dual` function of JuMP is overloaded to return duals
 for parameters:
-
 ```julia
 dual(p::ParameterRef)
 ```
 
 Last but not least!
+
 The parameter algebra was implemented so that is possible to:
 
 - sum two parameters
@@ -84,13 +75,13 @@ We can also solve it for different values of `a`.
 
 ```julia
 # Create a JuMP model able to handle parameters
-model = ModelWithParams(SOME_SOLVER.Optimizer)
+model = Model(GLPK.Optimizer)
 
 # Create a regular JuMP variable
 @variable(model, x)
 
 # Create a parameter fixed at 10
-add_parameter(model, a, 10)
+@variable(model, a == 10, Param())
 
 # adds a constraint mixing variables and parameters to the model
 @constraint(model, x >= a)
@@ -102,7 +93,7 @@ optimize!(model)
 dual(a)
 
 # modify the value of the parameter a to 20
-fix(a, 20)
+set_value(a, 20)
 
 # solve the model with the new value of the parameter
 optimize!(model)
@@ -172,7 +163,7 @@ optimize!(model_pure)
 y_duals = dual.(fix_y)
 
 # modify y
-fix.(y_fixed, new_value_for_y)
+set_value.(y_fixed, new_value_for_y)
 
 # solve problem (again)
 optimize!(model_pure)
@@ -191,20 +182,21 @@ real need!!!
 The same example of the motivation can be written with **parameters**:
 
 ```julia
+P, M, N = 2, 2, 3
+value_for_y = rand(M)
+A, b, c, D = rand(N, P), rand(P), rand(N), rand(M, P)
 # create a ParameterJuMP Model
-model_param = ModelWithParams(SOME_SOLVER.Optimizer)
+model_param = ModelWithParams(GLPK.Optimizer)
 
 # add optimization variables
 @variable(model_param, x[1:N] >= 0)
 
 # add dummy fixed variables
-y = [add_parameter(model_param, value_for_y[i]) for i in 1:M]
-# or
-# y = add_parameters(model_param, value_for_y)
+y = @variable(model_param, y[i = 1:M] == value_for_y[i], Param())
 
 # add constraints
 @constraint(model_param, ctr[k in 1:P],
-    sum(A[i,k]*x[i] for i in 1:N) == b[k] - sum(D[j,k]*y[j] for j in 1:M))
+    sum(A[i,k]*x[i] for i in 1:N) >= b[k] - sum(D[j,k]*y[j] for j in 1:M))
 
 # create objective function
 @objective(model_param, Min, sum(c[i]*x[i] for i in 1:N))
@@ -216,7 +208,7 @@ optimize!(model_param)
 y_duals = dual.(y)
 
 # modify y
-fix.(y, new_value_for_y)
+set_value.(y, y_duals)
 
 # solve problem (again)
 optimize!(model_param)

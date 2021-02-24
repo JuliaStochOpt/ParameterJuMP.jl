@@ -4,13 +4,16 @@ struct ParameterValue{T} <: JuMP.AbstractVariable
     value::T
 end
 
-_invalid_init_error(msg) = error("Invalid initialization of parameter. " * msg * " not supported.")
+function _invalid_init_msg(msg)
+    return "Invalid initialization of parameter. " * msg * " not supported."
+end
+
 function JuMP.build_variable(_error::Function, info::JuMP.VariableInfo, ::Param)
-    info.has_lb && _invalid_init_error("Lower bound")
-    info.has_ub && _invalid_init_error("Upper bound")
-    info.binary && _invalid_init_error("Binary")
-    info.integer && _invalid_init_error("Integer")
-    info.has_start && _invalid_init_error("Initial value")
+    info.has_lb && _error(_invalid_init_msg("Lower bound"))
+    info.has_ub && _error(_invalid_init_msg("Upper bound"))
+    info.binary && _error(_invalid_init_msg("Binary"))
+    info.integer && _error(_invalid_init_msg("Integer"))
+    info.has_start && _error(_invalid_init_msg("Initial value"))
     if !info.has_fix
         return ParameterValue(0.0)
     else
