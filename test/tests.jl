@@ -531,6 +531,14 @@ function test_add_to_expression(args...)
     @test isequal(ex, 9 * (7.0 * x + 9.0 * a + 8.0))
 end
 
+function test_mutable_operate(args...)
+    model = ModelWithParams()
+    x = @variable(model)
+    y = add_parameter(model, 1.0)
+    ex = @expression(model, x - 1 * (1 * y))
+    @test isequal(ex, x - y)
+end
+
 function runtests(optimizer)
     for name in names(@__MODULE__; all = true)
         if startswith("$(name)", "test_")

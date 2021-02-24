@@ -1,21 +1,76 @@
-function MA.mutable_operate!(op::MA.AddSubMul, aff::PAE, x::Union{JuMP.VariableRef, GAEv, ParameterRef, GAEp}, c::Number)
+
+###
+### MA.mutable_operate!(op::MA.AddSubMul, ...)
+###
+
+# 4-argument functions
+
+function MA.mutable_operate!(
+    op::MA.AddSubMul,
+    aff::PAE,
+    x::Union{JuMP.VariableRef, GAEv, ParameterRef, GAEp},
+    c::Number,
+)
     return MA.mutable_operate!(op, aff, c, x)
 end
-function MA.mutable_operate!(op::MA.AddSubMul, aff::PAE, c::Number, x::Union{JuMP.VariableRef, GAEv})
+
+function MA.mutable_operate!(
+    op::MA.AddSubMul,
+    aff::PAE,
+    c::Number,
+    x::Union{JuMP.VariableRef, GAEv},
+)
     if !iszero(c)
         MA.mutable_operate!(op, aff.v, c, x)
     end
     return aff
 end
-function MA.mutable_operate!(op::MA.AddSubMul, aff::PAE, c::Number, x::Union{ParameterRef, GAEp})
+
+function MA.mutable_operate!(
+    op::MA.AddSubMul,
+    aff::PAE,
+    c::Number,
+    x::Union{ParameterRef, GAEp},
+)
     if !iszero(c)
         MA.mutable_operate!(op, aff.p, c, x)
     end
     return aff
 end
+
 function MA.mutable_operate!(op::MA.AddSubMul, aff::PAE, c::Number, x::Number)
     if !iszero(c) && !iszero(x)
         aff.v = MA.mutable_operate!(op, aff.v, c, x)
+    end
+    return aff
+end
+
+# n-argument functions
+
+function MA.mutable_operate!(
+    op::MA.AddSubMul,
+    aff::PAE,
+    a::Number,
+    b::Number,
+    rhs::ParameterRef,
+)
+    c = a * b
+    if !iszero(c)
+        aff.p = MA.mutable_operate!(op, aff.p, c, rhs)
+    end
+    return aff
+end
+
+function MA.mutable_operate!(
+    op::MA.AddSubMul,
+    aff::PAE,
+    rhs::PAE,
+    args::Number...
+)
+    c = prod(args)
+    if !iszero(c)
+        aff.p = MA.mutable_operate!(op, aff.p, c, rhs.p)
+        aff.v = MA.mutable_operate!(op, aff.v, c, rhs.v)
     end
     return aff
 end
@@ -41,7 +96,6 @@ function JuMP.add_to_expression!(lhs::PAE, rhs::PAE)
     JuMP.add_to_expression!(lhs.v, rhs.v)
     return lhs
 end
-
 
 # 3-argument functions
 
