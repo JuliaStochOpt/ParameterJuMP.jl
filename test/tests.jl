@@ -493,6 +493,79 @@ function test_deletion_constraint(args...)
     @test parametrized_dual_objective_value(model) ≈ -0.5α - 1
 end
 
+function test_add_to_expression(args...)
+    model = ModelWithParams(args...)
+    a = add_parameter(model, 1.0)
+    @variable(model, x)
+    ex = @expression(model, x + a)
+    @test isequal(ex, x + a)
+    # Number
+    add_to_expression!(ex, 1.0)
+    @test isequal(ex, x + a + 1.0)
+    # ParameterRef
+    add_to_expression!(ex, a)
+    @test isequal(ex, x + 2.0 * a + 1.0)
+    # PAE
+    add_to_expression!(ex, copy(ex))
+    @test isequal(ex, 2.0 * x + 4.0 * a + 2.0)
+    # Number * Number
+    add_to_expression!(ex, 2.0, 3.0)
+    @test isequal(ex, 2.0 * x + 4.0 * a + 8.0)
+    # Number * Variable
+    add_to_expression!(ex, 3.0, x)
+    @test isequal(ex, 5.0 * x + 4.0 * a + 8.0)
+    # Variable * Number
+    add_to_expression!(ex, x, 2.0)
+    @test isequal(ex, 7.0 * x + 4.0 * a + 8.0)
+    # Number * ParameterRef
+    add_to_expression!(ex, 3.0, a)
+    @test isequal(ex, 7.0 * x + 7.0 * a + 8.0)
+    # ParameterRef * Number
+    add_to_expression!(ex, a, 2.0)
+    @test isequal(ex, 7.0 * x + 9.0 * a + 8.0)
+    # PAE * Number
+    add_to_expression!(ex, copy(ex), 2.0)
+    @test isequal(ex, 3 * (7.0 * x + 9.0 * a + 8.0))
+    # Number * PAE
+    add_to_expression!(ex, 2.0, copy(ex))
+    @test isequal(ex, 9 * (7.0 * x + 9.0 * a + 8.0))
+end
+
+function test_mutable_operate(args...)
+    model = ModelWithParams()
+    x = @variable(model)
+    p = add_parameter(model, 1.0)
+    exv = @expression(model, x + 1.0)
+    exp = @expression(model, 2.0 * p)
+    # -(PAE, Number, Number, Parameter)
+    ex = @expression(model, x - 1 * (1 * p))
+    @test isequal(ex, x - p)
+    # -(PAE, Number, Number, Variable)
+    ex = @expression(model, p - 1 * (1 * x))
+    @test isequal(ex, p - x)
+    # -(PAE, Number, Number, GAEv)
+    ex = @expression(model, p - 1 * (1 * exv))
+    @test isequal(ex, p - exv)
+    # -(PAE, Number, Number, GAEp)
+    ex = @expression(model, x - 1 * (1 * exp))
+    a = x - exp; a.p.constant = abs(a.p.constant); a.v.constant = abs(a.v.constant)
+    @test isequal(ex, a)
+
+    # -(PAE, Number, Parameter, Number)
+    ex = @expression(model, x - 1 * (p * 1))
+    @test isequal(ex, x - p)
+    # -(PAE, Number, Variable, Number)
+    ex = @expression(model, p - 1 * (x * 1))
+    @test isequal(ex, p - x)
+    # -(PAE, Number, GAEv, Number)
+    ex = @expression(model, p - 1 * (exv * 1))
+    @test isequal(ex, p - exv)
+    # -(PAE, Number, GAEp, Number)
+    ex = @expression(model, x - 1 * (exp * 1))
+    a = x - exp; a.p.constant = abs(a.p.constant); a.v.constant = abs(a.v.constant)
+    @test isequal(ex, a)
+end
+
 function runtests(optimizer)
     for name in names(@__MODULE__; all = true)
         if startswith("$(name)", "test_")
