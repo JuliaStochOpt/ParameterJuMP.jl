@@ -20,28 +20,64 @@ function MA.mutable_operate!(op::MA.AddSubMul, aff::PAE, c::Number, x::Number)
     return aff
 end
 
-function JuMP.add_to_expression!(aff::PAE, other::Number)
-    JuMP.add_to_expression!(aff.v, other)
+###
+### JuMP.add_to_expression
+###
+
+# 2-argument functions
+
+function JuMP.add_to_expression!(lhs::PAE, rhs::Union{Number,VariableRef,GAEv})
+    JuMP.add_to_expression!(lhs.v, rhs)
+    return lhs
 end
-function JuMP.add_to_expression!(aff::PAE, new_var::JuMP.VariableRef, new_coef)
-    JuMP.add_to_expression!(aff.v, new_coef, new_var)
+
+function JuMP.add_to_expression!(lhs::PAE, rhs::ParameterRef)
+    JuMP.add_to_expression!(lhs.p, rhs)
+    return lhs
 end
-function JuMP.add_to_expression!(aff::PAE, new_coef, new_var::JuMP.VariableRef)
-    JuMP.add_to_expression!(aff.v, new_coef, new_var)
+
+function JuMP.add_to_expression!(lhs::PAE, rhs::PAE)
+    JuMP.add_to_expression!(lhs.p, rhs.p)
+    JuMP.add_to_expression!(lhs.v, rhs.v)
+    return lhs
 end
-function JuMP.add_to_expression!(aff::PAE, new_var::JuMP.VariableRef)
-    JuMP.add_to_expression!(aff.v, new_var)
+
+
+# 3-argument functions
+
+function JuMP.add_to_expression!(lhs::PAE, x::Real, y::Real)
+    JuMP.add_to_expression!(lhs.v, x, y)
+    return lhs
 end
-function JuMP.add_to_expression!(aff::PAE, new_param::ParameterRef, new_coef)
-    JuMP.add_to_expression!(aff.p, new_coef, new_param)
+
+function JuMP.add_to_expression!(lhs::PAE, x::Union{VariableRef,GAEv}, y::Real)
+    JuMP.add_to_expression!(lhs.v, x, y)
+    return lhs
 end
-function JuMP.add_to_expression!(aff::PAE, new_param::ParameterRef)
-    JuMP.add_to_expression!(aff.p,new_param)
+
+function JuMP.add_to_expression!(lhs::PAE, x::Real, y::Union{VariableRef,GAEv})
+    JuMP.add_to_expression!(lhs.v, x, y)
+    return lhs
 end
-function JuMP.add_to_expression!(aff::PAE, new_coef, new_param::ParameterRef)
-    JuMP.add_to_expression!(aff.p, new_coef, new_param)
+
+function JuMP.add_to_expression!(lhs::PAE, x::ParameterRef, y::Real)
+    JuMP.add_to_expression!(lhs.p, x, y)
+    return lhs
 end
-function JuMP.add_to_expression!(lhs_aff::PAE, rhs_aff::PAE)
-    JuMP.add_to_expression!(lhs_aff.p, rhs_aff.p)
-    JuMP.add_to_expression!(lhs_aff.v, rhs_aff.v)
+
+function JuMP.add_to_expression!(lhs::PAE, x::Real, y::ParameterRef)
+    JuMP.add_to_expression!(lhs.p, x, y)
+    return lhs
+end
+
+function JuMP.add_to_expression!(lhs::PAE, x::PAE, y::Real)
+    JuMP.add_to_expression!(lhs.v, x.v, y)
+    JuMP.add_to_expression!(lhs.p, x.p, y)
+    return lhs
+end
+
+function JuMP.add_to_expression!(lhs::PAE, x::Real, y::PAE)
+    JuMP.add_to_expression!(lhs.v, x, y.v)
+    JuMP.add_to_expression!(lhs.p, x, y.p)
+    return lhs
 end
