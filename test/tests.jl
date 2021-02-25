@@ -560,6 +560,15 @@ function test_mutable_operate(args...)
     @test isequal(ex, a)
 end
 
+function test_float(args...)
+    model = ModelWithParams()
+    @variable(model, p == 1, Param())
+    @variable(model, x)
+    @expression(model, ex, 2 * p + 1)
+    @constraint(model, ex <= 0)
+    # @constraint(model, ex >= x)
+end
+
 function runtests(optimizer)
     for name in names(@__MODULE__; all = true)
         if startswith("$(name)", "test_")

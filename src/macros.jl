@@ -15,7 +15,7 @@ function JuMP.build_variable(_error::Function, info::JuMP.VariableInfo, ::Param)
     if !info.has_fix
         return ParameterValue(0.0)
     else
-        return ParameterValue(info.fixed_value)
+        return ParameterValue(convert(Float64, info.fixed_value))
     end
 end
 
