@@ -10,9 +10,9 @@ JuMP.FixRef(p::ParameterRef) =
 JuMP.unfix(p::ParameterRef) = error("Parameters cannot be unfixed.")
 
 function JuMP.fix(p::ParameterRef, val::Real)
-    data = _getparamdata(p)::ParameterData
+    data = _getparamdata(p)::_ParameterData
     data.sync = false
-    data.future_values[index(data, p)] = val
+    data.future_values[index(p)] = val
     return nothing
 end
 
@@ -23,15 +23,15 @@ end
 Sets the parameter `p` to the new value `val`.
 """
 function fix(p::ParameterRef, val::Real)
-    params = _getparamdata(p)::ParameterData
+    params = _getparamdata(p)::_ParameterData
     params.sync = false
     params.future_values[index(p)] = val
     return nothing
 end
 
 function JuMP.value(p::ParameterRef)
-    data = _getparamdata(p)::ParameterData
-    data.future_values[index(data, p)]
+    data = _getparamdata(p)::_ParameterData
+    data.future_values[index(p)]
 end
 
 # interface continues

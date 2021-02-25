@@ -175,12 +175,12 @@ function JuMP.add_constraint(m::JuMP.Model, c::PAEC{S}, name::String="") where S
     # JuMP´s standard add_constrint
     cref = JuMP.add_constraint(m, c_lin, name)
 
-    data = _getparamdata(m)::ParameterData
+    data = _getparamdata(m)::_ParameterData
 
     # needed for lazy get dual
     if lazy_duals(data)
         for (p, coef) in c.func.p.terms
-            push!(data.constraints_map[index(data, p)], ParametrizedConstraintRef(cref, coef))
+            push!(data.constraints_map[index(p)], ParametrizedConstraintRef(cref, coef))
         end
     end
 
@@ -194,30 +194,30 @@ end
 # ------------------------------------------------------------------------------
 
 
-function _update_constraints(data::ParameterData)
-    _update_constraints(data, EQ)
-    _update_constraints(data, LE)
-    _update_constraints(data, GE)
+function _update_constraints(data::_ParameterData)
+    _update_constraints(data, MOI.EqualTo{Float64})
+    _update_constraints(data, MOI.LessThan{Float64})
+    _update_constraints(data, MOI.GreaterThan{Float64})
 end
 
-function _update_constraints(data::ParameterData, ::Type{S}) where S
+function _update_constraints(data::_ParameterData, ::Type{S}) where S
     for (cref, gaep) in _get_param_dict(data, S)
         _update_constraint(data, cref, gaep)
     end
     return nothing
 end
 
-function _update_constraint(data::ParameterData, cref, gaep::GAEp{C}) where C
+function _update_constraint(data::_ParameterData, cref, gaep::GAEp{C}) where C
     val = 0.0
     @inbounds for (p, coef) in gaep.terms
-        ind = index(data, p)
+        ind = index(p)
         val += coef * (data.future_values[ind] - data.current_values[ind])
     end
     _update_constraint(data, cref, val)
     return nothing
 end
 
-function _update_constraint(data::ParameterData, cref, val::Number)
+function _update_constraint(data::_ParameterData, cref, val::Number)
     if !iszero(val)
         JuMP.add_to_function_constant(cref, val)
     end
@@ -228,11 +228,11 @@ end
 # ------------------------------------------------------------------------------
 
 function JuMP.dual(p::ParameterRef)
-    params = _getparamdata(p)::ParameterData
+    params = _getparamdata(p)::_ParameterData
     if lazy_duals(params)
         return _getdual(p)
     else
-        return params.dual_values[index(params, p)]
+        return params.dual_values[index(p)]
     end
 end
 
@@ -245,7 +245,7 @@ function _getdual(pcr::ParametrizedConstraintRef)::Float64
     pcr.coef * JuMP.dual(pcr.cref)
 end
 function _getdual(model::JuMP.Model, ind::Integer)
-    params = _getparamdata(model)::ParameterData
+    params = _getparamdata(model)::_ParameterData
     # See (12) in http://www.juliaopt.org/MathOptInterface.jl/stable/apimanual.html#Duals-1
     # in the dual objective: - sum_i b_i^T y_i
     # Here b_i depends on the param and is b_i' + coef * param
@@ -257,27 +257,27 @@ end
 
 # non lazy
 
-function _update_duals(data::ParameterData)
+function _update_duals(data::_ParameterData)
     if !lazy_duals(data)
         fill!(data.dual_values, 0.0)
-        _update_duals(data, EQ)
-        _update_duals(data, GE)
-        _update_duals(data, LE)
+        _update_duals(data, MOI.EqualTo{Float64})
+        _update_duals(data, MOI.GreaterThan{Float64})
+        _update_duals(data, MOI.LessThan{Float64})
     end
     return nothing
 end
 
-function _update_duals(data::ParameterData, ::Type{S}) where S
+function _update_duals(data::_ParameterData, ::Type{S}) where S
     for (cref, gaep) in _get_param_dict(data, S)
         _update_duals(data, cref, gaep)
     end
     return nothing
 end
 
-function _update_duals(data::ParameterData, cref, gaep)
+function _update_duals(data::_ParameterData, cref, gaep)
     dual_sol = JuMP.dual(cref)
     @inbounds for (p, coef) in gaep.terms
-        data.dual_values[index(data, p)] -= coef * dual_sol
+        data.dual_values[index(p)] -= coef * dual_sol
     end
     return nothing
 end
@@ -289,7 +289,7 @@ function JuMP.set_coefficient(con::CtrRef{F, S}, p::ParameterRef, coef::Number) 
     data = _getparamdata(p)
     dict = _get_param_dict(data, S)
     old_coef = 0.0
-    ind = index(data, p)
+    ind = index(p)
     if haskey(dict, con)
         gaep = dict[con]
         old_coef = get!(gaep.terms, p, 0.0)
@@ -337,7 +337,7 @@ Removes parameter `param` from constraint `con`.
 function delete_from_constraint(con::CtrRef{F, S}, p::ParameterRef) where {F, S}
     data = _getparamdata(p)
     dict = _get_param_dict(data, S)
-    ind = index(data, p)
+    ind = index(p)
     if haskey(dict, con)
         old_coef = get!(dict[con].terms, p, 0.0)
         _update_constraint(data, con, (0.0-old_coef) * data.current_values[ind])
@@ -370,7 +370,7 @@ Removes parameter `param` from all constraints.
 function delete_from_constraints(::Type{S}, p::ParameterRef) where S
     data = _getparamdata(p)
     dict = _get_param_dict(data, S)
-    ind = index(data, p)
+    ind = index(p)
     for (con, gaep) in dict
         if haskey(gaep.terms, p)
             if !iszero(gaep.terms[p]) && !iszero(data.future_values[ind])
@@ -393,9 +393,9 @@ function delete_from_constraints(::Type{S}, p::ParameterRef) where S
 end
 
 function delete_from_constraints(param::ParameterRef)
-    delete_from_constraints(EQ, param)
-    delete_from_constraints(LE, param)
-    delete_from_constraints(GE, param)
+    delete_from_constraints(MOI.EqualTo{Float64}, param)
+    delete_from_constraints(MOI.LessThan{Float64}, param)
+    delete_from_constraints(MOI.GreaterThan{Float64}, param)
     # TODO lazy
     nothing
 end
