@@ -70,7 +70,7 @@ end
 function test_lessthan(args...)
     model = ModelWithParams(args...)
     α = add_parameter(model, 1.0)
-    fix(α, -1.0)
+    set_value(α, -1.0)
     @variable(model, x)
     cref = @constraint(model, x ≤ α)
     @objective(model, Max, x)
@@ -80,7 +80,7 @@ function test_lessthan(args...)
     @test JuMP.dual(α) == -1.0
     @test parametrized_dual_objective_value(model) ≈ -α - 2 atol=1e-3
 
-    fix(α, 2.0)
+    set_value(α, 2.0)
     JuMP.optimize!(model)
     @test JuMP.value(x) == 2.0
     @test JuMP.dual(cref) == -1.0
@@ -91,7 +91,7 @@ end
 function test_equalto(args...)
     model = ModelWithParams(args...)
     α = add_parameter(model, 1.0)
-    fix(α, -1.0)
+    set_value(α, -1.0)
     @variable(model, x)
     cref = @constraint(model, x == α)
     @objective(model, Max, x)
@@ -101,7 +101,7 @@ function test_equalto(args...)
     @test JuMP.dual(α) == -1.0
     @test parametrized_dual_objective_value(model) ≈ -α - 2 atol=1e-3
 
-    fix(α, 2.0)
+    set_value(α, 2.0)
     JuMP.optimize!(model)
     @test JuMP.value(x) == 2.0
     @test JuMP.dual(cref) == -1.0
@@ -112,7 +112,7 @@ end
 function test_greaterthan(args...)
     model = ModelWithParams(args...)
     α = add_parameter(model, 1.0)
-    fix(α, -1.0)
+    set_value(α, -1.0)
     @variable(model, x)
     cref = @constraint(model, x >= α)
     @objective(model, Min, x)
@@ -122,7 +122,7 @@ function test_greaterthan(args...)
     @test JuMP.dual(α) == 1.0
     @test parametrized_dual_objective_value(model) ≈ 1α
 
-    fix(α, 2.0)
+    set_value(α, 2.0)
     JuMP.optimize!(model)
     @test JuMP.value(x) == 2.0
     @test JuMP.dual(cref) == 1.0
@@ -207,7 +207,7 @@ end
 function test_add_after_solve(args...)
     model = ModelWithParams(args...)
     α = add_parameter(model, 1.0)
-    fix(α, -1.0)
+    set_value(α, -1.0)
     @variable(model, x)
     cref = @constraint(model, x <= α)
     @objective(model, Max, x)
@@ -251,7 +251,7 @@ end
 function test_change_coefficient(args...)
     model = ModelWithParams(args...)
     α = add_parameter(model, 1.0)
-    fix(α, -1.0)
+    set_value(α, -1.0)
     @variable(model, x)
     cref = @constraint(model, x >= α)
     @objective(model, Min, x)
@@ -317,7 +317,7 @@ end
 function test_remove_parameter_constraint(args...)
     model = ModelWithParams(args...)
     α = add_parameter(model, 1.0)
-    fix(α, -1.0)
+    set_value(α, -1.0)
     @variable(model, x)
     cref = @constraint(model, x >= α)
     @objective(model, Min, x)
@@ -338,7 +338,7 @@ end
 function test_remove_parameter_all_constraints(args...)
     model = ModelWithParams(args...)
     α = add_parameter(model, 1.0)
-    fix(α, -1.0)
+    set_value(α, -1.0)
     @variable(model, x)
     cref = @constraint(model, x >= α)
     @objective(model, Min, x)
@@ -360,7 +360,7 @@ function test_no_duals(args...)
     model = ModelWithParams(args...)
     ParameterJuMP.set_no_duals(model)
     α = add_parameter(model, 1.0)
-    fix(α, -1.0)
+    set_value(α, -1.0)
     @variable(model, x)
     cref = @constraint(model, x == α)
     @objective(model, Max, x)
@@ -443,7 +443,7 @@ end
 function test_add_ctr_alaternative(args...)
     model = ModelWithParams(args...)
     α = add_parameter(model, 1.0)
-    fix(α, -1.0)
+    set_value(α, -1.0)
     @variable(model, x)
     exp = x - α
     cref = @constraint(model, exp ≤ 0)
