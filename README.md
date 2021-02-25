@@ -31,20 +31,13 @@ ModelWithParams(args...)
 Which can receive the same inputs as the original `Model` constructor,
 and also returns the same `Model` type.
 
-The key constructor of ParameterJuMP is:
-
+To construct a parameter, pass `Param()` as the variable-type argument to
+`@variable`:
 ```julia
-add_parameter(model::JuMP.Model, value::Number)
+@variable(model, p == 1, Param())
+@variable(model, p[i = 1:3] == i, Param())
+anon = @variable(model, variable_type = Param())
 ```
-
-Which adds a parameter fixed at `value` to the JuMP model `model`.
-It is possible to create multiple parameters at the same time with:
-
-```julia
-add_parameters(model::JuMP.Model, values::Vector{Number})
-```
-
-Which returns a vector of parameters.
 
 It is possible to change the current value of a parameter with the
 function:
@@ -90,7 +83,7 @@ model = ModelWithParams(SOME_SOLVER.Optimizer)
 @variable(model, x)
 
 # Create a parameter fixed at 10
-add_parameter(model, a, 10)
+@variable(model, a == 10, Param())
 
 # adds a constraint mixing variables and parameters to the model
 @constraint(model, x >= a)
@@ -198,9 +191,7 @@ model_param = ModelWithParams(SOME_SOLVER.Optimizer)
 @variable(model_param, x[1:N] >= 0)
 
 # add dummy fixed variables
-y = [add_parameter(model_param, value_for_y[i]) for i in 1:M]
-# or
-# y = add_parameters(model_param, value_for_y)
+@variable(model, y[i = 1:M] == value_for_y[i], Param())
 
 # add constraints
 @constraint(model_param, ctr[k in 1:P],

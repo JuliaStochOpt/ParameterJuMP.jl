@@ -11,8 +11,7 @@ using MathOptInterface
 const MOI = MathOptInterface
 const MOIU = MOI.Utilities
 
-export
-ModelWithParams, ParameterRef, add_parameter, add_parameters, all_parameters, Param, parametrized_dual_objective_value
+export ModelWithParams, ParameterRef, all_parameters, Param, parametrized_dual_objective_value
 
 # types
 # ------------------------------------------------------------------------------
@@ -162,21 +161,10 @@ Test if the JuMP Model is updated to the latest value of all parameters.
 is_sync(data::ParameterData) = data.sync
 is_sync(model::JuMP.Model) = is_sync(_getparamdata(model))
 
-"""
-    add_parameter(model::JuMP.Model, val::Real)::ParameterRef
-
-Adds one parameter fixed at `val` to the model `model`.
-
-    add_parameter(model::JuMP.Model)::ParameterRef
-
-Adds one parameter fixed at zero to the model `model`.
-"""
-function add_parameter(model::JuMP.Model, val::Real)
+function _add_parameter(model::JuMP.Model, val::Real)
     params = _getparamdata(model)::ParameterData
-
     ind = params.next_ind
     params.next_ind += 1
-
     push!(params.inds, ind)
     push!(params.current_values, 0.0)
     push!(params.future_values, val)
@@ -184,58 +172,11 @@ function add_parameter(model::JuMP.Model, val::Real)
         params.sync = false
     end
     push!(params.dual_values, NaN)
-
     params.constraints_map[ind] = ParametrizedConstraintRef[]
-
     return ParameterRef(ind, model)
 end
-add_parameter(model) = add_parameter(model, 0.0)
 
 _addsizehint!(vec::Vector, len::Integer) = sizehint!(vec, len+length(vec))
-
-"""
-    add_parameters(model::JuMP.Model, val::Vector{R})::Vector{ParameterRef}
-
-Adds one parameter for each element of the vector `val`.
-
-    add_parameters(model::JuMP.Model, N::Integer)::Vector{ParameterRef}
-
-Adds `N` parameters to the model, all of them fixed in zero.
-"""
-function add_parameters(model::JuMP.Model, N::Integer)
-    return add_parameters(model::JuMP.Model, zeros(N))
-end
-function add_parameters(model::JuMP.Model, val::AbstractArray{R,N}) where {R,N}
-    params = _getparamdata(model)::ParameterData
-
-    nparam = length(val)
-    out = ParameterRef[]
-    out = similar(val, ParameterRef)
-    sizehint!(out, nparam)
-    _addsizehint!(params.inds, nparam)
-    _addsizehint!(params.current_values, nparam)
-    _addsizehint!(params.future_values, nparam)
-    _addsizehint!(params.dual_values, nparam)
-
-    for i in eachindex(val)
-        ind = params.next_ind
-        params.next_ind += 1
-
-        push!(params.inds, ind)
-        push!(params.current_values, 0.0)
-        push!(params.future_values, val[i])
-        if !iszero(val[i])
-            params.sync = false
-        end
-        push!(params.dual_values, NaN)
-
-        params.constraints_map[ind] = ParametrizedConstraintRef[]
-
-        out[i] = ParameterRef(ind, model)
-    end
-
-    return out
-end
 
 """
     all_parameters(model::JuMP.AbstractModel)::Vector{ParameterRef}
@@ -372,4 +313,5 @@ include("mutable_arithmetics.jl")
 include("macros.jl")
 include("print.jl")
 
+include("deprecations.jl")
 end
