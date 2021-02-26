@@ -21,16 +21,6 @@ A JuMP extension to use parameters in constraints constants.
 ParameterJuMP adds new methods created on top of JuMP to use constant
 parameters in optimization problems.
 
-To enable the usage of ParameterJuMP the optimization model must
-be constructed with the function:
-
-```julia
-ModelWithParams(args...)
-```
-
-Which can receive the same inputs as the original `Model` constructor,
-and also returns the same `Model` type.
-
 The key constructor of ParameterJuMP is:
 
 ```julia
@@ -84,7 +74,7 @@ We can also solve it for different values of `a`.
 
 ```julia
 # Create a JuMP model able to handle parameters
-model = ModelWithParams(SOME_SOLVER.Optimizer)
+model = Model(SOME_SOLVER.Optimizer)
 
 # Create a regular JuMP variable
 @variable(model, x)
@@ -192,7 +182,7 @@ The same example of the motivation can be written with **parameters**:
 
 ```julia
 # create a ParameterJuMP Model
-model_param = ModelWithParams(SOME_SOLVER.Optimizer)
+model_param = Model(SOME_SOLVER.Optimizer)
 
 # add optimization variables
 @variable(model_param, x[1:N] >= 0)
