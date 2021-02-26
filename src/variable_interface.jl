@@ -9,7 +9,7 @@ end
 Sets the parameter `p` to the new value `val`.
 """
 function JuMP.set_value(p::ParameterRef, val::Real)
-    params = _getparamdata(p)::ParameterData
+    params = _getparamdata(p)::_ParameterData
     params.sync = false
     params.future_values[index(p)] = val
     return val
@@ -21,7 +21,7 @@ end
 Return the current value of the parameter `p`.
 """
 function JuMP.value(p::ParameterRef)
-    data = _getparamdata(p)::ParameterData
+    data = _getparamdata(p)::_ParameterData
     return data.future_values[index(data, p)]
 end
 
