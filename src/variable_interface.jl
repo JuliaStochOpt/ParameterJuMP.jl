@@ -22,7 +22,7 @@ Return the current value of the parameter `p`.
 """
 function JuMP.value(p::ParameterRef)
     data = _getparamdata(p)::_ParameterData
-    return data.future_values[index(data, p)]
+    return data.future_values[index(p)]
 end
 
 # interface continues
