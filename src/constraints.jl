@@ -34,6 +34,19 @@ DGAE{C,V,P}() where {C,V,P} = zero(DGAE{C,V,P})
 
 Base.convert(::Type{PAE{C}}, aff::GAEv{C}) where {C} = PAE{C}(aff, GAEp{C}(zero(C)))
 
+function Base.convert(::Type{PAE{T}}, aff::PAE) where {T}
+    return PAE{T}(
+        GAEv{T}(
+            T(aff.v.constant),
+            Pair{VariableRef,T}[k => T(v) for (k, v) in aff.v.terms],
+        ),
+        GAEp{T}(
+            T(aff.p.constant),
+            Pair{ParameterRef,T}[k => T(v) for (k, v) in aff.p.terms],
+        ),
+    )
+end
+
 function JuMP.map_coefficients_inplace!(f::Function, a::PAE)
     map_coefficients_inplace!(f, a.v)
     # The iterator remains valid if existing elements are updated.
@@ -156,37 +169,38 @@ end
 # Build constraint
 # ------------------------------------------------------------------------------
 
-function JuMP.build_constraint(_error::Function, aff::PAE, set::S) where S <: Union{MOI.LessThan,MOI.GreaterThan,MOI.EqualTo}
-    offset = aff.v.constant
+function JuMP.build_constraint(
+    ::Function,
+    aff::PAE{Float64},
+    set::Union{MOI.LessThan,MOI.GreaterThan,MOI.EqualTo},
+)
+    shifted_set = MOIU.shift_constant(set, -aff.v.constant)
     aff.v.constant = 0.0
-    shifted_set = MOIU.shift_constant(set, -offset)
     return JuMP.ScalarConstraint(aff, shifted_set)
 end
 
-function JuMP.build_constraint(_error::Function, aff::PAE, lb, ub)
-    JuMP.build_constraint(_error, aff, MOI.Interval(lb, ub))
+function JuMP.build_constraint(
+    errf::Function,
+    aff::PAE,
+    set::Union{MOI.LessThan,MOI.GreaterThan,MOI.EqualTo},
+)
+    return build_constraint(errf, convert(PAE{Float64}, aff), set)
 end
 
 function JuMP.add_constraint(m::JuMP.Model, c::PAEC{S}, name::String="") where S
-
     # build LinearConstraint
     c_lin = JuMP.ScalarConstraint(c.func.v, c.set)
-
     # JuMP´s standard add_constrint
     cref = JuMP.add_constraint(m, c_lin, name)
-
     data = _getparamdata(m)::_ParameterData
-
     # needed for lazy get dual
     if lazy_duals(data)
         for (p, coef) in c.func.p.terms
             push!(data.constraints_map[index(p)], ParametrizedConstraintRef(cref, coef))
         end
     end
-
     # save the parameter part of a parametric affine expression
     _get_param_dict(data, S)[cref] = c.func.p
-
     return cref
 end
 
