@@ -34,6 +34,19 @@ DGAE{C,V,P}() where {C,V,P} = zero(DGAE{C,V,P})
 
 Base.convert(::Type{PAE{C}}, aff::GAEv{C}) where {C} = PAE{C}(aff, GAEp{C}(zero(C)))
 
+function Base.convert(::Type{PAE{T}}, aff::PAE) where {T}
+    return PAE{T}(
+        GAEv{T}(
+            T(aff.v.constant),
+            Pair{VariableRef,T}[k => T(v) for (k, v) in aff.v.terms],
+        ),
+        GAEp{T}(
+            T(aff.p.constant),
+            Pair{ParameterRef,T}[k => T(v) for (k, v) in aff.p.terms],
+        ),
+    )
+end
+
 function JuMP.map_coefficients_inplace!(f::Function, a::PAE)
     map_coefficients_inplace!(f, a.v)
     # The iterator remains valid if existing elements are updated.
@@ -171,17 +184,7 @@ function JuMP.build_constraint(
     aff::PAE,
     set::Union{MOI.LessThan,MOI.GreaterThan,MOI.EqualTo},
 )
-    aff2 = PAE{Float64}(
-        GAEv{Float64}(
-            aff.v.constant,
-            Pair{VariableRef,Float64}[k => Float64(v) for (k, v) in aff.v.terms],
-        ),
-        GAEp{Float64}(
-            aff.p.constant,
-            Pair{ParameterRef,Float64}[k => Float64(v) for (k, v) in aff.p.terms],
-        ),
-    )
-    return build_constraint(errf, aff2, set)
+    return build_constraint(errf, convert(PAE{Float64}, aff), set)
 end
 
 function JuMP.add_constraint(m::JuMP.Model, c::PAEC{S}, name::String="") where S
