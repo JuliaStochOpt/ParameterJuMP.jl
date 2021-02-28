@@ -8,22 +8,22 @@ const MA = MutableArithmetics
 using JuMP
 export index
 
-export ModelWithParams, ParameterRef, all_parameters, Param, parametrized_dual_objective_value
+export ParameterRef, Param, all_parameters, parametrized_dual_objective_value
 
 # types
 # ------------------------------------------------------------------------------
-struct ParameterRef <: JuMP.AbstractVariableRef
+struct ParameterRef <: AbstractVariableRef
     ind::Int64 # local reference
-    model::JuMP.Model
+    model::Model
 end
 
 # Reference to a constraint in which the parameter has coefficient coef
 struct ParametrizedConstraintRef{C}
-    cref::JuMP.ConstraintRef{JuMP.Model, C}
+    cref::ConstraintRef{Model,C}
     coef::Float64
 end
 
-const CtrRef{F,S} = ConstraintRef{JuMP.Model,MOI.ConstraintIndex{F,S},JuMP.ScalarShape}
+const CtrRef{F,S} = ConstraintRef{Model,MOI.ConstraintIndex{F,S},ScalarShape}
 const SAF = MOI.ScalarAffineFunction{Float64}
 
 mutable struct _ParameterData
@@ -37,15 +37,15 @@ mutable struct _ParameterData
     constraints_map::Dict{Int64,Vector{ParametrizedConstraintRef}}
     parameters_map_saf_in_eq::Dict{
         CtrRef{SAF,MOI.EqualTo{Float64}},
-        JuMP.GenericAffExpr{Float64,ParameterRef},
+        GenericAffExpr{Float64,ParameterRef},
     }
     parameters_map_saf_in_le::Dict{
         CtrRef{SAF,MOI.LessThan{Float64}},
-        JuMP.GenericAffExpr{Float64,ParameterRef},
+        GenericAffExpr{Float64,ParameterRef},
     }
     parameters_map_saf_in_ge::Dict{
         CtrRef{SAF,MOI.GreaterThan{Float64}},
-        JuMP.GenericAffExpr{Float64,ParameterRef},
+        GenericAffExpr{Float64,ParameterRef},
     }
     names::Dict{ParameterRef,String}
     lazy::Bool
@@ -59,10 +59,10 @@ mutable struct _ParameterData
             Float64[],
             Float64[],
             true,
-            Dict{Int64,Vector{JuMP.ConstraintRef}}(),
-            Dict{CtrRef{SAF,MOI.EqualTo{Float64}},JuMP.GenericAffExpr{Float64,ParameterRef}}(),
-            Dict{CtrRef{SAF,MOI.LessThan{Float64}},JuMP.GenericAffExpr{Float64,ParameterRef}}(),
-            Dict{CtrRef{SAF,MOI.GreaterThan{Float64}},JuMP.GenericAffExpr{Float64,ParameterRef}}(),
+            Dict{Int64,Vector{ConstraintRef}}(),
+            Dict{CtrRef{SAF,MOI.EqualTo{Float64}},GenericAffExpr{Float64,ParameterRef}}(),
+            Dict{CtrRef{SAF,MOI.LessThan{Float64}},GenericAffExpr{Float64,ParameterRef}}(),
+            Dict{CtrRef{SAF,MOI.GreaterThan{Float64}},GenericAffExpr{Float64,ParameterRef}}(),
             Dict{ParameterRef,String}(),
             false,
             false,
@@ -72,9 +72,9 @@ mutable struct _ParameterData
 end
 
 no_duals(data::_ParameterData) = data.no_duals
-no_duals(model::JuMP.Model) = no_duals(_getparamdata(model))
+no_duals(model::Model) = no_duals(_getparamdata(model))
 
-set_no_duals(model::JuMP.Model) = set_no_duals(_getparamdata(model))
+set_no_duals(model::Model) = set_no_duals(_getparamdata(model))
 function set_no_duals(data::_ParameterData)
     if isempty(data.current_values)
         data.no_duals = true
@@ -86,16 +86,16 @@ function set_no_duals(data::_ParameterData)
 end
 
 """
-    JuMP.index(p::ParameterRef)::Int64
+    index(p::ParameterRef)::Int64
 
 Return the internal index of the parameter `p`.
 """
 JuMP.index(p::ParameterRef) = p.ind
 
 lazy_duals(data::_ParameterData) = data.lazy
-lazy_duals(model::JuMP.Model) = lazy_duals(_getparamdata(model))
+lazy_duals(model::Model) = lazy_duals(_getparamdata(model))
 
-set_lazy_duals(model::JuMP.Model) = set_lazy_duals(_getparamdata(model))
+set_lazy_duals(model::Model) = set_lazy_duals(_getparamdata(model))
 function set_lazy_duals(data::_ParameterData)
     if isempty(data.current_values)
         data.lazy = true
@@ -106,7 +106,7 @@ function set_lazy_duals(data::_ParameterData)
     end
 end
 
-set_not_lazy_duals(model::JuMP.Model) = set_not_lazy_duals(_getparamdata(model))
+set_not_lazy_duals(model::Model) = set_not_lazy_duals(_getparamdata(model))
 function set_not_lazy_duals(data::_ParameterData)
     if isempty(data.current_values)
         data.lazy = false
@@ -130,8 +130,12 @@ function _get_param_dict(data::_ParameterData, ::Type{MOI.GreaterThan{Float64}})
 end
 
 _getmodel(p::ParameterRef) = p.model
-_getparamdata(p::ParameterRef)::_ParameterData = _getparamdata(_getmodel(p))::_ParameterData
-function _getparamdata(model::JuMP.Model)::_ParameterData
+
+function _getparamdata(p::ParameterRef)::_ParameterData
+    return _getparamdata(_getmodel(p))::_ParameterData
+end
+
+function _getparamdata(model::Model)::_ParameterData
     params = get(model.ext, :ParameterJuMP, nothing)
     if params !== nothing
         return params
@@ -140,14 +144,14 @@ function _getparamdata(model::JuMP.Model)::_ParameterData
 end
 
 """
-    is_sync(model::JuMP.Model)
+    is_sync(model::Model)
 
 Test if the JuMP Model is updated to the latest value of all parameters.
 """
 is_sync(data::_ParameterData) = data.sync
-is_sync(model::JuMP.Model) = is_sync(_getparamdata(model))
+is_sync(model::Model) = is_sync(_getparamdata(model))
 
-function _add_parameter(model::JuMP.Model, val::Real)
+function _add_parameter(model::Model, val::Real)
     params = _getparamdata(model)::_ParameterData
     ind = params.next_ind
     params.next_ind += 1
@@ -165,12 +169,12 @@ end
 _addsizehint!(vec::Vector, len::Integer) = sizehint!(vec, len+length(vec))
 
 """
-    all_parameters(model::JuMP.AbstractModel)::Vector{ParameterRef}
+    all_parameters(model::AbstractModel)::Vector{ParameterRef}
 
 Returns a list of all parameters currently in the model. The parameters are
 ordered by creation time.
 """
-function all_parameters(model::JuMP.AbstractModel)
+function all_parameters(model::AbstractModel)
     data = _getparamdata(model)
     return ParameterRef[ParameterRef(ind, model) for ind in data.inds]
 end
@@ -179,40 +183,30 @@ end
 # ------------------------------------------------------------------------------
 
 """
-    ModelWithParams(args...; kwargs...)::JuMP.Model
+    enable_parameters(m::Model)
 
-This function is deprecated. Use `JuMP.Model` instead.
+Enables a `Model` to handle `Parameters`.
 """
-function ModelWithParams(args...; kwargs...)
-    @warn("ModelWithParams is deprecated and no longer needed. Use JuMP.Model instead.")
-    return JuMP.Model(args...; kwargs...)
-end
-
-"""
-    enable_parameters(m::JuMP.Model)
-
-Enables a `JuMP.Model` to handle `Parameters`.
-"""
-function enable_parameters(m::JuMP.Model)
+function enable_parameters(m::Model)
     if haskey(m.ext, :params)
         error("Model already has parameter enabled")
     end
-    JuMP.set_optimize_hook(m, parameter_optimizehook)
-    return initialize_parameter_data(m)
+    set_optimize_hook(m, parameter_optimizehook)
+    return _initialize_parameter_data(m)
 end
 
-function initialize_parameter_data(model::JuMP.Model)
+function _initialize_parameter_data(model::Model)
     return model.ext[:ParameterJuMP] = _ParameterData()
 end
 
 # The constraint has been deleted. We cannot keep `dict` in sync with deletions
-# as we return a `JuMP.ConstraintRef`, not a custom type when the user create a
+# as we return a `ConstraintRef`, not a custom type when the user create a
 # parametrized constraint.
-function _update_dicts_with_deletion(data::_ParameterData, S::Type)
+function _update_dicts_with_deletion(data::_ParameterData, ::Type{S}) where {S}
     dict = _get_param_dict(data, S)
     to_delete = eltype(keys(dict))[]
-    for (cref, gaep) in dict
-        if !JuMP.is_valid(cref.model, cref)
+    for cref in keys(dict)
+        if !is_valid(cref.model, cref)
             push!(to_delete, cref)
         end
     end
@@ -220,33 +214,29 @@ function _update_dicts_with_deletion(data::_ParameterData, S::Type)
         delete!(dict, cref)
     end
 end
+
 function _update_dicts_with_deletion(data::_ParameterData)
     _update_dicts_with_deletion(data, MOI.EqualTo{Float64})
     _update_dicts_with_deletion(data, MOI.LessThan{Float64})
     _update_dicts_with_deletion(data, MOI.GreaterThan{Float64})
+    return
 end
-function parameter_optimizehook(m::JuMP.Model; kwargs...)
+
+function parameter_optimizehook(m::Model; kwargs...)
     data = _getparamdata(m)::_ParameterData
-
     _update_dicts_with_deletion(data)
-
-    # sync model rhs to newest parameter values
     sync(data)
-
-    ret = JuMP.optimize!(m::JuMP.Model, ignore_optimize_hook = true, kwargs...)
-
-    # update duals for later query
-    if !no_duals(data) && JuMP.has_duals(m)
+    optimize!(m::Model, ignore_optimize_hook = true, kwargs...)
+    if !no_duals(data) && has_duals(m)
         _update_duals(data)
     end
-    return ret
+    return
 end
 
 """
-    sync(model::JuMP.Model)::Nothing
+    sync(model::Model)
 
-Forces the model to update its constraints to the new values of the
-Parameters.
+Forces the model to update its constraints to the new values of the parameters.
 """
 function sync(data::_ParameterData)
     if !is_sync(data)
@@ -254,13 +244,11 @@ function sync(data::_ParameterData)
         data.current_values .= data.future_values
         data.sync = true
     end
-    return nothing
+    return
 end
-function sync(model::JuMP.Model)
-    sync(_getparamdata(model))
-end
+sync(model::Model) = sync(_getparamdata(model))
 
-function parametrized_dual_objective_value(model::JuMP.AbstractModel)
+function parametrized_dual_objective_value(model::AbstractModel)
     params = all_parameters(model)
     linear = [param => dual(param) for param in params]
     obj = dual_objective_value(model)
@@ -268,22 +256,10 @@ function parametrized_dual_objective_value(model::JuMP.AbstractModel)
     return GenericAffExpr(constant, linear)
 end
 
-# constraints
-# ------------------------------------------------------------------------------
 include("constraints.jl")
-
-# JuMP variable interface
-# ------------------------------------------------------------------------------
 include("variable_interface.jl")
-
-# operators and mutable arithmetics
-# ------------------------------------------------------------------------------
 include("operators.jl")
 include("mutable_arithmetics.jl")
-
-
-# other
-# ------------------------------------------------------------------------------
 include("macros.jl")
 include("print.jl")
 
