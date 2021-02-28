@@ -1,3 +1,11 @@
+function JuMP.fix(p::ParameterRef, val::Real)
+    @warn(
+        "JuMP.fix has been deprecated. Use `set_value(p, v)` instead.",
+        maxlog = 1,
+    )
+    return set_value(p, val)
+end
+
 """
     add_parameter(model::JuMP.Model, val::Real)::ParameterRef
 
