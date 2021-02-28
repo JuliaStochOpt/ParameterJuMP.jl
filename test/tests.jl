@@ -20,7 +20,7 @@ macro test_expression_with_string(expr, str)
 end
 
 function test_basic(args...)
-    m_slave = ModelWithParams(args...)
+    m_slave = Model(args...)
 
     @variable(m_slave, x[1:2] == 4.0, Param())
     @test x == all_parameters(m_slave)
@@ -40,7 +40,7 @@ function test_basic(args...)
 end
 
 function test_multiple_parameters(args...)
-    m_slave = ModelWithParams(args...)
+    m_slave = Model(args...)
 
     @variable(m_slave, x[1:6] == 4.0, Param())
     @variable(m_slave, y[1:6])
@@ -68,7 +68,7 @@ function test_multiple_parameters(args...)
 end
 
 function test_lessthan(args...)
-    model = ModelWithParams(args...)
+    model = Model(args...)
     @variable(model, α == 1.0, Param())
     fix(α, -1.0)
     @variable(model, x)
@@ -89,7 +89,7 @@ function test_lessthan(args...)
 end
 
 function test_equalto(args...)
-    model = ModelWithParams(args...)
+    model = Model(args...)
     @variable(model, α == 1.0, Param())
     fix(α, -1.0)
     @variable(model, x)
@@ -110,7 +110,7 @@ function test_equalto(args...)
 end
 
 function test_greaterthan(args...)
-    model = ModelWithParams(args...)
+    model = Model(args...)
     @variable(model, α == 1.0, Param())
     fix(α, -1.0)
     @variable(model, x)
@@ -131,7 +131,7 @@ function test_greaterthan(args...)
 end
 
 function test_multiple_parameters2(args...)
-    model = ModelWithParams(args...)
+    model = Model(args...)
     @variable(model, α[1:10] == 1.0, Param())
     @variable(model, x)
     cref = @constraint(model, x == sum(2 * α[i] for i in 1:10))
@@ -144,7 +144,7 @@ function test_multiple_parameters2(args...)
 end
 
 function test_mixing_params_and_vars_1(args...)
-    model = ModelWithParams(args...)
+    model = Model(args...)
     @variable(model, α[1:5] == 1.0, Param())
     @variable(model, x)
     cref = @constraint(model, sum(x for i in 1:5) == sum(2 * α[i] for i in 1:5))
@@ -157,7 +157,7 @@ function test_mixing_params_and_vars_1(args...)
 end
 
 function test_mixing_params_and_vars_2(args...)
-    model = ModelWithParams(args...)
+    model = Model(args...)
     @variable(model, α[1:5] == 1.0, Param())
     @variable(model, x)
     cref = @constraint(model, 0.0 == sum(-x + 2 * α[i] for i in 1:5))
@@ -170,7 +170,7 @@ function test_mixing_params_and_vars_2(args...)
 end
 
 function test_mixing_params_and_vars_3(args...)
-    model = ModelWithParams(args...)
+    model = Model(args...)
     @variable(model, α[1:5] == 1.0, Param())
     @variable(model, x)
     cref = @constraint(model, 0.0 == sum(-x + 2.0 + 2 * α[i] for i in 1:5))
@@ -182,14 +182,8 @@ function test_mixing_params_and_vars_3(args...)
     @test parametrized_dual_objective_value(model) ≈ 2/5 * sum(α) + 2
 end
 
-function test_bad_model(args...)
-    model_1 = Model(args...)
-    @test_throws ErrorException x = add_parameters(model_1, ones(5))
-    @test_throws ErrorException y = add_parameter(model_1, 1.0)
-end
-
 function test_lazy_duals_error(args...)
-    model_2 = ModelWithParams(args...)
+    model_2 = Model(args...)
     ParameterJuMP.set_lazy_duals(model_2)
     ParameterJuMP.set_lazy_duals(model_2) # warn
     ParameterJuMP.set_not_lazy_duals(model_2)
@@ -197,7 +191,7 @@ function test_lazy_duals_error(args...)
     @variable(model_2, y == 1.0, Param())
     @test_throws ErrorException ParameterJuMP.set_lazy_duals(model_2)
 
-    model_3 = ModelWithParams(args...)
+    model_3 = Model(args...)
     ParameterJuMP.set_lazy_duals(model_3)
     @variable(model_3, y == 1.0, Param())
     @test_throws ErrorException ParameterJuMP.set_not_lazy_duals(model_3)
@@ -205,7 +199,7 @@ function test_lazy_duals_error(args...)
 end
 
 function test_add_after_solve(args...)
-    model = ModelWithParams(args...)
+    model = Model(args...)
     @variable(model, α == 1.0, Param())
     fix(α, -1.0)
     @variable(model, x)
@@ -229,7 +223,7 @@ function test_add_after_solve(args...)
 end
 
 function test_set_coefficient(args...)
-    model = ModelWithParams(args...)
+    model = Model(args...)
     @variable(model, α == 1.0, Param())
     @variable(model, x)
     cref = @constraint(model, x <= 0.0)
@@ -249,7 +243,7 @@ function test_set_coefficient(args...)
 end
 
 function test_change_coefficient(args...)
-    model = ModelWithParams(args...)
+    model = Model(args...)
     @variable(model, α == 1.0, Param())
     fix(α, -1.0)
     @variable(model, x)
@@ -270,7 +264,7 @@ function test_change_coefficient(args...)
 end
 
 function test_set_coefficient_lazy(args...)
-    model = ModelWithParams(args...)
+    model = Model(args...)
     ParameterJuMP.set_lazy_duals(model)
     @variable(model, α == 1.0, Param())
     @variable(model, x)
@@ -291,7 +285,7 @@ function test_set_coefficient_lazy(args...)
 end
 
 function test_set_coefficient_lazy2(args...)
-    model = ModelWithParams(args...)
+    model = Model(args...)
     ParameterJuMP.set_lazy_duals(model)
     @variable(model, α == 1.0, Param())
     @variable(model, b == 0.0, Param())
@@ -315,7 +309,7 @@ function test_set_coefficient_lazy2(args...)
 end
 
 function test_remove_parameter_constraint(args...)
-    model = ModelWithParams(args...)
+    model = Model(args...)
     @variable(model, α == 1.0, Param())
     fix(α, -1.0)
     @variable(model, x)
@@ -336,7 +330,7 @@ function test_remove_parameter_constraint(args...)
 end
 
 function test_remove_parameter_all_constraints(args...)
-    model = ModelWithParams(args...)
+    model = Model(args...)
     @variable(model, α == 1.0, Param())
     fix(α, -1.0)
     @variable(model, x)
@@ -357,7 +351,7 @@ function test_remove_parameter_all_constraints(args...)
 end
 
 function test_no_duals(args...)
-    model = ModelWithParams(args...)
+    model = Model(args...)
     ParameterJuMP.set_no_duals(model)
     @variable(model, α == 1.0, Param())
     fix(α, -1.0)
@@ -369,13 +363,13 @@ function test_no_duals(args...)
     @test JuMP.dual(cref) == -1.0
     @test isnan(JuMP.dual(α))
 
-    model_2 = ModelWithParams(args...)
+    model_2 = Model(args...)
     @variable(model_2, y == 1.0, Param())
     @test_throws ErrorException ParameterJuMP.set_no_duals(model_2)
 end
 
 function test_ParameterizedAffExpr(args...)
-    m = ModelWithParams()
+    m = Model()
     @variable(m, x)
     @variable(m, y)
     a = @variable(m, variable_type = Param())
@@ -441,7 +435,7 @@ function test_ParameterizedAffExpr(args...)
 end
 
 function test_add_ctr_alaternative(args...)
-    model = ModelWithParams(args...)
+    model = Model(args...)
     @variable(model, α == 1.0, Param())
     fix(α, -1.0)
     @variable(model, x)
@@ -456,7 +450,7 @@ function test_add_ctr_alaternative(args...)
 end
 
 function test_macro(args...)
-    m = ModelWithParams()
+    m = Model()
     @variable(m, x)
     @variable(m, y)
     @variable(m, a, ParameterJuMP.Param())
@@ -470,7 +464,7 @@ function test_macro(args...)
 end
 
 function test_deletion_constraint(args...)
-    model = ModelWithParams(args...)
+    model = Model(args...)
     @variable(model, α == -1.0, Param())
     @variable(model, x)
     cref1 = @constraint(model, x ≤ α/2)
@@ -494,7 +488,7 @@ function test_deletion_constraint(args...)
 end
 
 function test_add_to_expression(args...)
-    model = ModelWithParams(args...)
+    model = Model(args...)
     @variable(model, a == 1.0, Param())
     @variable(model, x)
     ex = @expression(model, x + a)
@@ -532,7 +526,7 @@ function test_add_to_expression(args...)
 end
 
 function test_mutable_operate(args...)
-    model = ModelWithParams()
+    model = Model()
     x = @variable(model)
     @variable(model, p == 1.0, Param())
     exv = @expression(model, x + 1.0)

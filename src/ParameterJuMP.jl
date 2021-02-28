@@ -131,11 +131,12 @@ end
 
 _getmodel(p::ParameterRef) = p.model
 _getparamdata(p::ParameterRef)::_ParameterData = _getparamdata(_getmodel(p))::_ParameterData
-# _getparamdata(model::JuMP.Model) = model.ext[:params]::_ParameterData
 function _getparamdata(model::JuMP.Model)::_ParameterData
-    # TODO checks dict twice
-    !haskey(model.ext, :params) && error("In order to use Parameters the model must be created with the ModelWithParams constructor")
-    return model.ext[:params]
+    params = get(model.ext, :ParameterJuMP, nothing)
+    if params !== nothing
+        return params
+    end
+    return enable_parameters(model)
 end
 
 """
@@ -180,25 +181,15 @@ end
 """
     ModelWithParams(args...; kwargs...)::JuMP.Model
 
-Returns a JuMP.Model able to handle `Parameters`.
-
-`args` and `kwargs` are the same parameters that would be passed
-to the regular `Model` constructor.
-
-Example using GLPK solver:
-
-```julia
-model = ModelWithParams(GLPK.Optimizer)
-```
+This function is deprecated. Use `JuMP.Model` instead.
 """
 function ModelWithParams(args...; kwargs...)
-    m = JuMP.Model(args...; kwargs...)
-    enable_parameters(m)
-    return m
+    @warn("ModelWithParams is deprecated and no longer needed. Use JuMP.Model instead.")
+    return JuMP.Model(args...; kwargs...)
 end
 
 """
-    enable_parameters(m::JuMP.Model)::Nothing
+    enable_parameters(m::JuMP.Model)
 
 Enables a `JuMP.Model` to handle `Parameters`.
 """
@@ -206,14 +197,12 @@ function enable_parameters(m::JuMP.Model)
     if haskey(m.ext, :params)
         error("Model already has parameter enabled")
     end
-    # test and compare hook
-    initialize_parameter_data(m)
     JuMP.set_optimize_hook(m, parameter_optimizehook)
-    return nothing
+    return initialize_parameter_data(m)
 end
 
-function initialize_parameter_data(m::JuMP.Model)
-    m.ext[:params] = _ParameterData()
+function initialize_parameter_data(model::JuMP.Model)
+    return model.ext[:ParameterJuMP] = _ParameterData()
 end
 
 # The constraint has been deleted. We cannot keep `dict` in sync with deletions
