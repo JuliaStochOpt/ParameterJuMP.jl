@@ -70,7 +70,9 @@ end
 function test_lessthan(args...)
     model = ModelWithParams(args...)
     α = add_parameter(model, 1.0)
+    @test value(α) == 1.0
     set_value(α, -1.0)
+    @test value(α) == -1.0
     @variable(model, x)
     cref = @constraint(model, x ≤ α)
     @objective(model, Max, x)

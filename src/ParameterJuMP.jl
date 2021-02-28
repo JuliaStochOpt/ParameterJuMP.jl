@@ -357,4 +357,6 @@ include("mutable_arithmetics.jl")
 include("macros.jl")
 include("print.jl")
 
+include("deprecations.jl")
+
 end
