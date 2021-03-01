@@ -356,12 +356,16 @@ end
 
 # 3-argument functions
 
+# V -- Number
+
 function JuMP.add_to_expression!(
     lhs::DGAE{C1,V,P},
     x::Union{Number,V,GAE{C2,V}},
     y::Number,
 ) where {C1,C2,V,P}
-    JuMP.add_to_expression!(lhs.v, x, y)
+    if !iszero(y)
+        add_to_expression!(lhs.v, x, y)
+    end
     return lhs
 end
 
@@ -370,7 +374,19 @@ function JuMP.add_to_expression!(
     y::Number,
     x::Union{V,GAE{C2,V}},
 ) where {C1,C2,V,P}
-    JuMP.add_to_expression!(lhs.v, x, y)
+    return add_to_expression!(lhs, x, y)
+end
+
+# P -- Number
+
+function JuMP.add_to_expression!(
+    lhs::DGAE{C1,V,P},
+    x::Union{P,GAE{C2,P}},
+    y::Number,
+) where {C1,C2,V,P}
+    if !iszero(y)
+        JuMP.add_to_expression!(lhs.p, x, y)
+    end
     return lhs
 end
 
@@ -379,27 +395,24 @@ function JuMP.add_to_expression!(
     y::Number,
     x::Union{P,GAE{C2,P}},
 ) where {C1,C2,V,P}
-    JuMP.add_to_expression!(lhs.p, x, y)
-    return lhs
+    return add_to_expression!(lhs, x, y)
 end
 
-function JuMP.add_to_expression!(
-    lhs::DGAE{C1,V,P},
-    x::Union{P,GAE{C2,P}},
-    y::Number,
-) where {C1,C2,V,P}
-    JuMP.add_to_expression!(lhs.p, x, y)
-    return lhs
-end
+# DGAE -- Real
 
 function JuMP.add_to_expression!(lhs::DGAE, x::DGAE, y::Real)
-    JuMP.add_to_expression!(lhs.v, x.v, y)
-    JuMP.add_to_expression!(lhs.p, x.p, y)
+    if iszero(y)
+        return lhs
+    end
+    if !iszero(x.v)
+        JuMP.add_to_expression!(lhs.v, x.v, y)
+    end
+    if !iszero(x.p)
+        JuMP.add_to_expression!(lhs.p, x.p, y)
+    end
     return lhs
 end
 
-function JuMP.add_to_expression!(lhs::DGAE, x::Real, y::DGAE)
-    JuMP.add_to_expression!(lhs.v, x, y.v)
-    JuMP.add_to_expression!(lhs.p, x, y.p)
-    return lhs
+function JuMP.add_to_expression!(lhs::DGAE, y::Real, x::DGAE)
+    return add_to_expression!(lhs, x, y)
 end
