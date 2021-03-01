@@ -163,6 +163,18 @@ function MA.promote_operation(
     return DGAE{C,V1,V2}
 end
 
+
+# DGAE -- DGAE
+
+function MA.promote_operation(
+    op::Union{typeof(+),typeof(-)},
+    ::Type{DGAE{C1,V1,V2}},
+    ::Type{DGAE{C2,V1,V2}},
+) where {C1,C2,V1,V2}
+    C = MA.promote_operation(op, C1, C2)
+    return DGAE{C,V1,V2}
+end
+
 ###
 ### MA.mutable_operate!(zero/one, ...)
 ###
@@ -231,7 +243,7 @@ _collect_args(v, p, c, ::MA.Zero) = v, p, c
 _collect_args(v, p, c, x::Number) = v, p, c * x
 _collect_args(::Nothing, p::Nothing, c, x::Union{VariableRef,GAEv}) = x, p, c
 _collect_args(v::Nothing, ::Nothing, c, x::Union{ParameterRef,GAEp}) = v, x, c
-function _collect_args(::Nothing, ::Nothing, c, x::PAE)
+function _collect_args(::Nothing, ::Nothing, c, x::DGAE)
     if iszero(x.v) && iszero(x.p)
         return nothing, nothing, c
     elseif iszero(x.v)
