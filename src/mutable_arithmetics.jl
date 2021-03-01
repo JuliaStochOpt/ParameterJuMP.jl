@@ -197,21 +197,14 @@ end
 
 # 4-argument functions
 
-function MA.mutable_operate!(
-    op::MA.AddSubMul,
-    aff::PAE,
-    x::Union{VariableRef,GAEv,ParameterRef,GAEp},
-    c::Number,
-)
-    return MA.mutable_operate!(op, aff, c, x)
-end
+# DGAE - V
 
 function MA.mutable_operate!(
     op::MA.AddSubMul,
-    aff::PAE,
+    aff::DGAE{C,V,P},
     c::Number,
-    x::Union{VariableRef,GAEv},
-)
+    x::Union{V,GAE{C,V}},
+) where {C,V,P}
     if !iszero(c)
         MA.mutable_operate!(op, aff.v, c, x)
     end
@@ -220,61 +213,117 @@ end
 
 function MA.mutable_operate!(
     op::MA.AddSubMul,
-    aff::PAE,
+    aff::DGAE{C,V,P},
+    x::Union{V,GAE{C,V}},
+    c::Number = 1,
+) where {C,V,P}
+    return MA.mutable_operate!(op, aff, c, x)
+end
+
+# DGAE - P
+
+function MA.mutable_operate!(
+    op::MA.AddSubMul,
+    aff::DGAE{C,V,P},
     c::Number,
-    x::Union{ParameterRef,GAEp},
-)
+    x::Union{P,GAE{C,P}},
+) where {C,V,P}
     if !iszero(c)
         MA.mutable_operate!(op, aff.p, c, x)
     end
     return aff
 end
 
-function MA.mutable_operate!(op::MA.AddSubMul, aff::PAE, c::Number, x::Number)
+function MA.mutable_operate!(
+    op::MA.AddSubMul,
+    aff::DGAE{C,V,P},
+    x::Union{P,GAE{C,P}},
+    c::Number = 1,
+) where {C,V,P}
+    return MA.mutable_operate!(op, aff, c, x)
+end
+
+# DGAE - DGAE
+
+function MA.mutable_operate!(
+    op::MA.AddSubMul,
+    aff::DGAE{C,V,P},
+    c::Number,
+    x::DGAE{C,V,P},
+) where {C,V,P}
+    if !iszero(c)
+        MA.mutable_operate!(op, aff.p, c, x.p)
+        MA.mutable_operate!(op, aff.v, c, x.v)
+    end
+    return aff
+end
+
+function MA.mutable_operate!(
+    op::MA.AddSubMul,
+    aff::DGAE{C,V,P},
+    x::DGAE{C,V,P},
+    c::Number = 1,
+) where {C,V,P}
+    return MA.mutable_operate!(op, aff, c, x)
+end
+
+# DGAE - Number
+
+function MA.mutable_operate!(
+    op::MA.AddSubMul,
+    aff::DGAE,
+    c::Number,
+    x::Number = 1,
+)
     if !iszero(c) && !iszero(x)
-        aff.v = MA.mutable_operate!(op, aff.v, c, x)
+        MA.mutable_operate!(op, aff.v, c, x)
     end
     return aff
 end
 
 # n-argument functions
 
-_collect_args(v, p, c, ::MA.Zero) = v, p, c
-_collect_args(v, p, c, x::Number) = v, p, c * x
-_collect_args(::Nothing, p::Nothing, c, x::Union{VariableRef,GAEv}) = x, p, c
-_collect_args(v::Nothing, ::Nothing, c, x::Union{ParameterRef,GAEp}) = v, x, c
-function _collect_args(::Nothing, ::Nothing, c, x::DGAE)
-    if iszero(x.v) && iszero(x.p)
-        return nothing, nothing, c
-    elseif iszero(x.v)
-        return nothing, x.p, c
-    elseif iszero(x.p)
-        return x.v, nothing, c
-    end
-end
-
-function _collect_args(::Type{T}, args::Tuple) where {T}
-    v, p, c = nothing, nothing, one(T)
-    for arg in args
-        v, p, c = _collect_args(v, p, c, arg)
-    end
-    return v, p, c
+@generated function _add_sub_mul_reorder!(
+    op::MA.AddSubMul,
+    expr::DGAE,
+    args::Vararg{Any,N},
+) where {N}
+    n = length(args)
+    @assert n ≥ 3
+    varidx = findall(t -> !(t <: Number), collect(args))
+    allscalar = all(t -> (t <: Number), args[setdiff(1:n, varidx)])
+    # We need to get down to only two factors
+    # If there are only constants and one JuMP expressions, then we multiply
+    # the constants together. Otherwise we multiply all factors except the
+    # last one, there may be a better thing to do here.
+    idx = (allscalar && length(varidx) == 1) ? varidx[1] : n
+    coef = Expr(:call, :*, [:(args[$i]) for i in setdiff(1:n, idx)]...)
+    return :(MA.mutable_operate!(op, expr, $coef, args[$idx]))
 end
 
 function MA.mutable_operate!(
     op::MA.AddSubMul,
-    lhs::PAE{T},
-    args::Vararg{Any, N},
-) where {T,N}
-    v, p, c = _collect_args(T, args)
-    if v === nothing && p === nothing
-        MA.mutable_operate!(op, lhs.v, one(T), c)
-    elseif v !== nothing && !iszero(v)
-        MA.mutable_operate!(op, lhs.v, c, v)
-    elseif p !== nothing && !iszero(p)
-        MA.mutable_operate!(op, lhs.p, c, p)
-    end
-    return lhs
+    expr::DGAE,
+    x,
+    y,
+    z,
+    other_args::Vararg{Any,N},
+) where {N}
+    return _add_sub_mul_reorder!(op, expr, x, y, z, other_args...)
+end
+
+function MA.mutable_operate!(::typeof(*), expr::DGAE, x::Number)
+    MA.mutable_operate!(*, expr.v, x)
+    MA.mutable_operate!(*, expr.p, x)
+    return expr
+end
+
+function MA.mutable_operate!(::typeof(+), expr::DGAE, x)
+    return JuMP.add_to_expression!(expr, x)
+end
+
+function MA.mutable_operate!(::typeof(-), expr::DGAE, x)
+    return JuMP.add_to_expression!(expr, -1, x)
 end
 
 ###
@@ -283,17 +332,23 @@ end
 
 # 2-argument functions
 
-function JuMP.add_to_expression!(lhs::PAE, rhs::Union{Number,VariableRef,GAEv})
+function JuMP.add_to_expression!(
+    lhs::DGAE{C1,V,P},
+    rhs::Union{Number,V,GAE{C2,V}},
+) where {C1,C2,V,P}
     JuMP.add_to_expression!(lhs.v, rhs)
     return lhs
 end
 
-function JuMP.add_to_expression!(lhs::PAE, rhs::ParameterRef)
+function JuMP.add_to_expression!(
+    lhs::DGAE{C1,V,P},
+    rhs::Union{P,GAE{C2,P}},
+) where {C1,C2,V,P}
     JuMP.add_to_expression!(lhs.p, rhs)
     return lhs
 end
 
-function JuMP.add_to_expression!(lhs::PAE, rhs::PAE)
+function JuMP.add_to_expression!(lhs::DGAE, rhs::DGAE)
     JuMP.add_to_expression!(lhs.p, rhs.p)
     JuMP.add_to_expression!(lhs.v, rhs.v)
     return lhs
@@ -301,38 +356,49 @@ end
 
 # 3-argument functions
 
-function JuMP.add_to_expression!(lhs::PAE, x::Real, y::Real)
+function JuMP.add_to_expression!(
+    lhs::DGAE{C1,V,P},
+    x::Union{Number,V,GAE{C2,V}},
+    y::Number,
+) where {C1,C2,V,P}
     JuMP.add_to_expression!(lhs.v, x, y)
     return lhs
 end
 
-function JuMP.add_to_expression!(lhs::PAE, x::Union{VariableRef,GAEv}, y::Real)
+function JuMP.add_to_expression!(
+    lhs::DGAE{C1,V,P},
+    y::Number,
+    x::Union{V,GAE{C2,V}},
+) where {C1,C2,V,P}
     JuMP.add_to_expression!(lhs.v, x, y)
     return lhs
 end
 
-function JuMP.add_to_expression!(lhs::PAE, x::Real, y::Union{VariableRef,GAEv})
-    JuMP.add_to_expression!(lhs.v, x, y)
-    return lhs
-end
-
-function JuMP.add_to_expression!(lhs::PAE, x::ParameterRef, y::Real)
+function JuMP.add_to_expression!(
+    lhs::DGAE{C1,V,P},
+    y::Number,
+    x::Union{P,GAE{C2,P}},
+) where {C1,C2,V,P}
     JuMP.add_to_expression!(lhs.p, x, y)
     return lhs
 end
 
-function JuMP.add_to_expression!(lhs::PAE, x::Real, y::ParameterRef)
+function JuMP.add_to_expression!(
+    lhs::DGAE{C1,V,P},
+    x::Union{P,GAE{C2,P}},
+    y::Number,
+) where {C1,C2,V,P}
     JuMP.add_to_expression!(lhs.p, x, y)
     return lhs
 end
 
-function JuMP.add_to_expression!(lhs::PAE, x::PAE, y::Real)
+function JuMP.add_to_expression!(lhs::DGAE, x::DGAE, y::Real)
     JuMP.add_to_expression!(lhs.v, x.v, y)
     JuMP.add_to_expression!(lhs.p, x.p, y)
     return lhs
 end
 
-function JuMP.add_to_expression!(lhs::PAE, x::Real, y::PAE)
+function JuMP.add_to_expression!(lhs::DGAE, x::Real, y::DGAE)
     JuMP.add_to_expression!(lhs.v, x, y.v)
     JuMP.add_to_expression!(lhs.p, x, y.p)
     return lhs

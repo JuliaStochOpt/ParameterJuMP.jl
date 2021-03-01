@@ -562,6 +562,17 @@ function test_mutable_operate(args...)
     @test isequal(ex, a)
 end
 
+function test_narg_mutable_operate(args...)
+    model = Model()
+    @variable(model, x[1:3])
+    @variable(model, p[1:3] == 1.0, Param())
+    @expression(model, ex[i=1:3], i * x[i] + 2.0 * p[i] + sqrt(i))
+    @test isequal(
+        @expression(model, sum(ex)),
+        @expression(model, sum(i * x[i] + 2.0 * p[i] + sqrt(i) for i = 1:3))
+    )
+end
+
 function test_float(args...)
     model = Model()
     @variable(model, p == 1, Param())
