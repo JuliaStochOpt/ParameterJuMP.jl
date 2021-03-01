@@ -1,3 +1,15 @@
+"""
+    ModelWithParams(args...; kwargs...)::JuMP.Model
+
+This function is deprecated. Use `JuMP.Model` instead.
+"""
+function ModelWithParams(args...; kwargs...)
+    @warn("ModelWithParams is deprecated and no longer needed. Use JuMP.Model instead.")
+    return JuMP.Model(args...; kwargs...)
+end
+
+export ModelWithParams
+
 function JuMP.fix(p::ParameterRef, val::Real)
     @warn(
         "JuMP.fix has been deprecated. Use `set_value(p, v)` instead.",
