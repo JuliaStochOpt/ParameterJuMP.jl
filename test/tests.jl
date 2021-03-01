@@ -563,12 +563,13 @@ function test_mutable_operate(args...)
 end
 
 function test_float(args...)
-    model = ModelWithParams()
+    model = Model()
     @variable(model, p == 1, Param())
     @variable(model, x)
     @expression(model, ex, 2 * p + 1)
     @constraint(model, ex <= 0)
-    # @constraint(model, ex >= x)
+    @constraint(model, ex >= x)
+    @constraint(model, ex <= 2x + 1)
 end
 
 function runtests(optimizer)
