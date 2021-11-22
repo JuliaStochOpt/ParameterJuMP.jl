@@ -10,9 +10,9 @@ MutableArithmetics = "d8a4904e-b15c-11e9-3269-09a3773c0cb0"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
 [compat]
-JuMP = "0.21.1"
-MathOptInterface = "0.9.1"
-MutableArithmetics = "0.2.2"
+JuMP = "0.22"
+MathOptInterface = "0.10"
+MutableArithmetics = "0.3"
 julia = "1"
 
 [extras]

@@ -176,107 +176,107 @@ function MA.promote_operation(
 end
 
 ###
-### MA.mutable_operate!(zero/one, ...)
+### MA.operate!(zero/one, ...)
 ###
 
-function MA.mutable_operate!(::typeof(zero), aff::DGAE)
-    MA.mutable_operate!(zero, aff.v)
-    MA.mutable_operate!(zero, aff.p)
+function MA.operate!(::typeof(zero), aff::DGAE)
+    MA.operate!(zero, aff.v)
+    MA.operate!(zero, aff.p)
     return aff
 end
 
-function MA.mutable_operate!(::typeof(one), aff::DGAE)
-    MA.mutable_operate!(one, aff.v)
-    MA.mutable_operate!(zero, aff.p)
+function MA.operate!(::typeof(one), aff::DGAE)
+    MA.operate!(one, aff.v)
+    MA.operate!(zero, aff.p)
     return aff
 end
 
 ###
-### MA.mutable_operate!(op::MA.AddSubMul, ...)
+### MA.operate!(op::MA.AddSubMul, ...)
 ###
 
 # 4-argument functions
 
 # DGAE - V
 
-function MA.mutable_operate!(
+function MA.operate!(
     op::MA.AddSubMul,
     aff::DGAE{C,V,P},
     c::Number,
     x::Union{V,GAE{C,V}},
 ) where {C,V,P}
     if !iszero(c)
-        MA.mutable_operate!(op, aff.v, c, x)
+        MA.operate!(op, aff.v, c, x)
     end
     return aff
 end
 
-function MA.mutable_operate!(
+function MA.operate!(
     op::MA.AddSubMul,
     aff::DGAE{C,V,P},
     x::Union{V,GAE{C,V}},
     c::Number = 1,
 ) where {C,V,P}
-    return MA.mutable_operate!(op, aff, c, x)
+    return MA.operate!(op, aff, c, x)
 end
 
 # DGAE - P
 
-function MA.mutable_operate!(
+function MA.operate!(
     op::MA.AddSubMul,
     aff::DGAE{C,V,P},
     c::Number,
     x::Union{P,GAE{C,P}},
 ) where {C,V,P}
     if !iszero(c)
-        MA.mutable_operate!(op, aff.p, c, x)
+        MA.operate!(op, aff.p, c, x)
     end
     return aff
 end
 
-function MA.mutable_operate!(
+function MA.operate!(
     op::MA.AddSubMul,
     aff::DGAE{C,V,P},
     x::Union{P,GAE{C,P}},
     c::Number = 1,
 ) where {C,V,P}
-    return MA.mutable_operate!(op, aff, c, x)
+    return MA.operate!(op, aff, c, x)
 end
 
 # DGAE - DGAE
 
-function MA.mutable_operate!(
+function MA.operate!(
     op::MA.AddSubMul,
     aff::DGAE{C,V,P},
     c::Number,
     x::DGAE{C,V,P},
 ) where {C,V,P}
     if !iszero(c)
-        MA.mutable_operate!(op, aff.p, c, x.p)
-        MA.mutable_operate!(op, aff.v, c, x.v)
+        MA.operate!(op, aff.p, c, x.p)
+        MA.operate!(op, aff.v, c, x.v)
     end
     return aff
 end
 
-function MA.mutable_operate!(
+function MA.operate!(
     op::MA.AddSubMul,
     aff::DGAE{C,V,P},
     x::DGAE{C,V,P},
     c::Number = 1,
 ) where {C,V,P}
-    return MA.mutable_operate!(op, aff, c, x)
+    return MA.operate!(op, aff, c, x)
 end
 
 # DGAE - Number
 
-function MA.mutable_operate!(
+function MA.operate!(
     op::MA.AddSubMul,
     aff::DGAE,
     c::Number,
     x::Number = 1,
 )
     if !iszero(c) && !iszero(x)
-        MA.mutable_operate!(op, aff.v, c, x)
+        MA.operate!(op, aff.v, c, x)
     end
     return aff
 end
@@ -298,10 +298,10 @@ end
     # last one, there may be a better thing to do here.
     idx = (allscalar && length(varidx) == 1) ? varidx[1] : n
     coef = Expr(:call, :*, [:(args[$i]) for i in setdiff(1:n, idx)]...)
-    return :(MA.mutable_operate!(op, expr, $coef, args[$idx]))
+    return :(MA.operate!(op, expr, $coef, args[$idx]))
 end
 
-function MA.mutable_operate!(
+function MA.operate!(
     op::MA.AddSubMul,
     expr::DGAE,
     x,
@@ -312,17 +312,17 @@ function MA.mutable_operate!(
     return _add_sub_mul_reorder!(op, expr, x, y, z, other_args...)
 end
 
-function MA.mutable_operate!(::typeof(*), expr::DGAE, x::Number)
-    MA.mutable_operate!(*, expr.v, x)
-    MA.mutable_operate!(*, expr.p, x)
+function MA.operate!(::typeof(*), expr::DGAE, x::Number)
+    MA.operate!(*, expr.v, x)
+    MA.operate!(*, expr.p, x)
     return expr
 end
 
-function MA.mutable_operate!(::typeof(+), expr::DGAE, x)
+function MA.operate!(::typeof(+), expr::DGAE, x)
     return JuMP.add_to_expression!(expr, x)
 end
 
-function MA.mutable_operate!(::typeof(-), expr::DGAE, x)
+function MA.operate!(::typeof(-), expr::DGAE, x)
     return JuMP.add_to_expression!(expr, -1, x)
 end
 
