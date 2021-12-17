@@ -65,8 +65,8 @@ function Base.sizehint!(a::PAE, n::Int, m::Int)
     sizehint!(a.p.terms, m)
 end
 
-function JuMP.value(ex::PAE{T}, var_value::Function) where {T}
-    ret = value(ex.v, var_value)
+function JuMP.value(var_value::Function, ex::PAE{T})::T where {T}
+    ret = value(var_value, ex.v)
     for (param, coef) in ex.p.terms
         ret += coef * var_value(param)
     end
@@ -138,7 +138,7 @@ function JuMP._assert_isfinite(a::DGAE)
     end
 end
 
-JuMP.value(a::DGAE) = JuMP.value(a, value)
+JuMP.value(a::DGAE) = JuMP.value(value, a)
 
 function JuMP.check_belongs_to_model(a::DGAE, model::AbstractModel)
     JuMP.check_belongs_to_model(a.v, model)
