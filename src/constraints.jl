@@ -299,7 +299,7 @@ end
 # constraint modification
 # ------------------------------------------------------------------------------
 
-function JuMP.set_coefficient(con::CtrRef{F, S}, p::ParameterRef, coef::Number) where {F<:SAF, S}
+function JuMP.set_normalized_coefficient(con::CtrRef{F, S}, p::ParameterRef, coef::Number) where {F<:SAF, S}
     data = _getparamdata(p)
     dict = _get_param_dict(data, S)
     old_coef = 0.0
