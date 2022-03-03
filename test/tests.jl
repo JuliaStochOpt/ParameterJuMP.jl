@@ -236,7 +236,7 @@ function test_set_coefficient(args...)
     @test JuMP.dual(α) == 0.0
     @test parametrized_dual_objective_value(model) ≈ 0α
 
-    set_coefficient(cref, α, 1.0)
+    JuMP.set_normalized_coefficient(cref, α, 1.0)
     JuMP.optimize!(model)
     @test JuMP.value(x) == -1.0
     @test JuMP.dual(cref) == -1.0
@@ -257,7 +257,7 @@ function test_change_coefficient(args...)
     @test JuMP.dual(α) == 1.0
     @test parametrized_dual_objective_value(model) ≈ 1α
 
-    ParameterJuMP.set_coefficient(cref, α, -2.0)
+    ParameterJuMP.set_normalized_coefficient(cref, α, -2.0)
     JuMP.optimize!(model)
     @test JuMP.value(x) == -2.0
     @test JuMP.dual(cref) == 1.0
@@ -278,7 +278,7 @@ function test_set_coefficient_lazy(args...)
     @test JuMP.dual(α) == 0.0
     @test parametrized_dual_objective_value(model) ≈ 0α
 
-    set_coefficient(cref, α, 1.0)
+    set_normalized_coefficient(cref, α, 1.0)
     JuMP.optimize!(model)
     @test JuMP.value(x) == -1.0
     @test JuMP.dual(cref) == -1.0
@@ -301,7 +301,7 @@ function test_set_coefficient_lazy2(args...)
     @test JuMP.dual(b) == -1.0
     @test parametrized_dual_objective_value(model) ≈ -b
 
-    set_coefficient(cref, α, 1.0)
+    set_normalized_coefficient(cref, α, 1.0)
     JuMP.optimize!(model)
     @test JuMP.value(x) == -1.0
     @test JuMP.dual(cref) == -1.0

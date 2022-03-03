@@ -1,7 +1,7 @@
 name = "ParameterJuMP"
 uuid = "774612a8-9878-5177-865a-ca53ae2495f9"
 repo = "https://github.com/JuliaStochOpt/ParameterJuMP.jl.git"
-version = "0.3.2"
+version = "0.4.0"
 
 [deps]
 JuMP = "4076af6c-e467-56ae-b986-b466b2749572"
@@ -10,10 +10,10 @@ MutableArithmetics = "d8a4904e-b15c-11e9-3269-09a3773c0cb0"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
 [compat]
-JuMP = "0.22"
-MathOptInterface = "0.10"
-MutableArithmetics = "0.3"
-julia = "1"
+JuMP = "0.23"
+MathOptInterface = "1"
+MutableArithmetics = "1"
+julia = "1.6"
 
 [extras]
 GLPK = "60bf3e95-4087-53dc-ae20-288a0d20c6a6"
